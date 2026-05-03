@@ -1,11 +1,29 @@
-import { View, Text } from 'react-native'
+import { NavigationContainer } from '@react-navigation/native'
+import { createNativeStackNavigator } from '@react-navigation/native-stack'
+
+import Dashboard from './screens/Dashboard'
+import Analyzer from './screens/Analyzer'
+
+const Stack = createNativeStackNavigator()
 
 export default function App() {
   return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text style={{ fontSize: 20 }}>
-        IF YOU SEE THIS, APP IS UPDATED ✅
-      </Text>
-    </View>
+    <NavigationContainer>
+      <Stack.Navigator initialRouteName="Dashboard">
+        
+        <Stack.Screen 
+          name="Dashboard" 
+          component={Dashboard} 
+          options={{ headerShown: false }}
+        />
+
+        <Stack.Screen 
+          name="Analyzer" 
+          component={Analyzer} 
+          options={{ title: "READSMART Analyzer" }}
+        />
+
+      </Stack.Navigator>
+    </NavigationContainer>
   )
 }
