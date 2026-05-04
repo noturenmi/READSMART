@@ -37,9 +37,9 @@ export default function Analyzer({ navigation }) {
     "What can be learned from the text?"
   ]
 
-  navigation.navigate('Results', {
-    keywords,
-    questions
+  navigation.navigate('Quiz', {
+  keywords,
+  questions
   })
 }
 

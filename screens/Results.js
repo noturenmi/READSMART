@@ -1,7 +1,7 @@
 import { View, Text } from 'react-native'
 
 export default function Results({ route }) {
-  const { keywords, questions } = route.params
+  const { keywords, questions, answers } = route.params
 
   return (
     <View style={{ flex: 1, padding: 20 }}>
@@ -10,6 +10,7 @@ export default function Results({ route }) {
         Analysis Results
       </Text>
 
+      {/* KEYWORDS */}
       <Text style={{ fontSize: 18, marginTop: 10 }}>
         Keywords:
       </Text>
@@ -17,6 +18,7 @@ export default function Results({ route }) {
         {keywords.join(', ')}
       </Text>
 
+      {/* QUESTIONS */}
       <Text style={{ fontSize: 18 }}>
         Comprehension Questions:
       </Text>
@@ -24,6 +26,17 @@ export default function Results({ route }) {
       {questions.map((q, index) => (
         <Text key={index} style={{ marginTop: 5 }}>
           {index + 1}. {q}
+        </Text>
+      ))}
+
+      {/* ✅ ANSWERS (ADD HERE) */}
+      <Text style={{ fontSize: 18, marginTop: 15 }}>
+        Your Answers:
+      </Text>
+
+      {answers && answers.map((ans, index) => (
+        <Text key={index} style={{ marginTop: 5 }}>
+          {index + 1}. {ans || "No answer"}
         </Text>
       ))}
 
