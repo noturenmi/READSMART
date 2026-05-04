@@ -30,12 +30,13 @@ export default function Analyzer({ navigation }) {
     .sort((a, b) => freq[b] - freq[a])
     .slice(0, 5)
 
-  let questions = [
-    "What is the main idea of the text?",
-    "What are the important keywords mentioned?",
-    "Why is this topic important?",
-    "What can be learned from the text?"
-  ]
+  let questions = keywords.map(word => {
+  return `What is ${word}?`
+})
+
+// add extra questions
+questions.push("What is the main idea of the text?")
+questions.push("Why is this topic important?")
 
   navigation.navigate('Quiz', {
   keywords,
