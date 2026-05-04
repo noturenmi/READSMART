@@ -5,13 +5,48 @@ export default function Analyzer() {
   const [text, setText] = useState('')
 
   const handleAnalyze = () => {
-    if (!text.trim()) {
-      alert("Please enter text first.")
-      return
-    }
-
-    alert("Text received:\n\n" + text)
+  if (!text.trim()) {
+    alert("Please enter text first.")
+    return
   }
+
+  // convert to lowercase
+  let words = text.toLowerCase().split(/\W+/)
+
+  // remove common words
+  const stopwords = [
+    "the","is","and","a","to","of","in","that","it","on","for","with",
+    "as","are","was","were","by","an","be","this","which","or"
+  ]
+
+  let filtered = words.filter(word => 
+    word && !stopwords.includes(word)
+  )
+
+  // count frequency
+  let freq = {}
+  filtered.forEach(word => {
+    freq[word] = (freq[word] || 0) + 1
+  })
+
+  // sort keywords
+  let keywords = Object.keys(freq)
+    .sort((a, b) => freq[b] - freq[a])
+    .slice(0, 5)
+
+  // simple question generator
+  let questions = [
+    "What is the main idea of the text?",
+    "What are the important keywords mentioned?",
+    "Why is this topic important?",
+    "What can be learned from the text?"
+  ]
+
+  alert(
+    "KEYWORDS:\n" + keywords.join(", ") +
+    "\n\nQUESTIONS:\n" + questions.join("\n")
+  )
+}
 
   return (
     <View style={{ flex: 1, padding: 20 }}>
