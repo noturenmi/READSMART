@@ -5,22 +5,23 @@ export default function Analyzer() {
   const [text, setText] = useState('')
 
   const handleAnalyze = () => {
+    if (!text.trim()) {
+      alert("Please enter text first.")
+      return
+    }
+
     alert("Text received:\n\n" + text)
   }
 
   return (
-    <View style={{
-      flex: 1,
-      padding: 20,
-      backgroundColor: '#fff'
-    }}>
+    <View style={{ flex: 1, padding: 20 }}>
 
       <Text style={{ fontSize: 22, fontWeight: 'bold', marginBottom: 10 }}>
         Enter Academic Text
       </Text>
 
       <TextInput
-        placeholder="Paste or type text here..."
+        placeholder="Paste your academic text here..."
         value={text}
         onChangeText={setText}
         multiline

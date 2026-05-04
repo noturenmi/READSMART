@@ -10,16 +10,16 @@ export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator initialRouteName="Dashboard">
-        
+
         <Stack.Screen 
           name="Dashboard" 
-          component={Dashboard} 
+          component={Dashboard}
           options={{ headerShown: false }}
         />
 
         <Stack.Screen 
           name="Analyzer" 
-          component={Analyzer} 
+          component={Analyzer}
           options={{ title: "READSMART Analyzer" }}
         />
 

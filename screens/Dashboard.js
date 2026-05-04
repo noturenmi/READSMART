@@ -14,7 +14,7 @@ export default function Dashboard({ navigation }) {
       </Text>
 
       <Text style={{ marginVertical: 10, textAlign: 'center' }}>
-        Smart Reading Comprehension & Writing Assistant
+        Improve Reading & Writing Skills
       </Text>
 
       <TouchableOpacity
@@ -27,7 +27,7 @@ export default function Dashboard({ navigation }) {
         }}
       >
         <Text style={{ color: 'white', fontWeight: 'bold' }}>
-          Start Analyzer
+          Start Analysis
         </Text>
       </TouchableOpacity>
 
