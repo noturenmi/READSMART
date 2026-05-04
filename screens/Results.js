@@ -1,6 +1,6 @@
-import { View, Text, ScrollView } from 'react-native'
+import { View, Text, ScrollView, TouchableOpacity } from 'react-native'
 
-export default function Results({ route }) {
+export default function Results({ route, navigation }) {
   const { keywords, questions, answers } = route.params
 
   const totalQuestions = questions.length
@@ -8,6 +8,7 @@ export default function Results({ route }) {
   const score = answered
 
   let feedback = ""
+
   if (score === totalQuestions) {
     feedback = "Excellent! You understood the text very well."
   } else if (score >= totalQuestions / 2) {
@@ -28,7 +29,7 @@ export default function Results({ route }) {
           Analysis Results
         </Text>
 
-        {/* KEYWORDS CARD */}
+        {/* KEYWORDS */}
         <View style={{
           backgroundColor: '#fff',
           padding: 15,
@@ -43,7 +44,7 @@ export default function Results({ route }) {
           </Text>
         </View>
 
-        {/* QUESTIONS CARD */}
+        {/* QUESTIONS */}
         <View style={{
           backgroundColor: '#fff',
           padding: 15,
@@ -61,7 +62,7 @@ export default function Results({ route }) {
           ))}
         </View>
 
-        {/* ANSWERS CARD */}
+        {/* ANSWERS */}
         <View style={{
           backgroundColor: '#fff',
           padding: 15,
@@ -79,7 +80,7 @@ export default function Results({ route }) {
           ))}
         </View>
 
-        {/* SCORE CARD */}
+        {/* SCORE */}
         <View style={{
           backgroundColor: '#4A90E2',
           padding: 15,
@@ -100,6 +101,21 @@ export default function Results({ route }) {
             {feedback}
           </Text>
         </View>
+
+        {/* BUTTON */}
+        <TouchableOpacity
+          onPress={() => navigation.popToTop()}
+          style={{
+            marginTop: 20,
+            backgroundColor: '#333',
+            padding: 12,
+            borderRadius: 10
+          }}
+        >
+          <Text style={{ color: 'white', textAlign: 'center' }}>
+            Try Another Text
+          </Text>
+        </TouchableOpacity>
 
       </View>
     </ScrollView>

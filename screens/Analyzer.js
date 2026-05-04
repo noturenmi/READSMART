@@ -3,49 +3,86 @@ import { useState } from 'react'
 
 export default function Analyzer({ navigation }) {
   const [text, setText] = useState('')
+  const [loading, setLoading] = useState(false)
 
   const handleAnalyze = () => {
-  if (!text.trim()) {
-    alert("Please enter text first.")
-    return
+    if (!text.trim()) {
+      alert("Please enter text first.")
+      return
+    }
+
+    setLoading(true)
+
+    setTimeout(() => {
+      let words = text.toLowerCase().split(/\W+/)
+
+      const stopwords = [
+        "the","is","and","a","to","of","in","that","it","on","for","with",
+        "as","are","was","were","by","an","be","this","which","or"
+      ]
+
+      let filtered = words.filter(word =>
+        word && !stopwords.includes(word)
+      )
+
+      let freq = {}
+      filtered.forEach(word => {
+        freq[word] = (freq[word] || 0) + 1
+      })
+
+      let keywords = Object.keys(freq)
+        .sort((a, b) => freq[b] - freq[a])
+        .slice(0, 5)
+
+      // QUESTIONS (CLEAN + CONTROLLED)
+      let questions = []
+
+      keywords.forEach(word => {
+        if (questions.length < 10) {
+          questions.push(`What is the meaning of "${word}" in the text?`)
+        }
+        if (questions.length < 10) {
+          questions.push(`How is "${word}" used in the context?`)
+        }
+      })
+
+      const fixedQuestions = [
+        "What is the main idea of the text?",
+        "Why is this text important for understanding?",
+        "What can be learned from the text?"
+      ]
+
+      fixedQuestions.forEach(q => {
+        if (questions.length < 10) {
+          questions.push(q)
+        }
+      })
+
+      // safety minimum
+      if (questions.length < 5) {
+        questions = fixedQuestions
+      }
+
+      questions = questions.slice(0, 10)
+
+      setLoading(false)
+
+      navigation.navigate('Quiz', {
+        keywords,
+        questions
+      })
+
+    }, 1200)
   }
-
-  let words = text.toLowerCase().split(/\W+/)
-
-  const stopwords = [
-    "the","is","and","a","to","of","in","that","it","on","for","with",
-    "as","are","was","were","by","an","be","this","which","or"
-  ]
-
-  let filtered = words.filter(word => 
-    word && !stopwords.includes(word)
-  )
-
-  let freq = {}
-  filtered.forEach(word => {
-    freq[word] = (freq[word] || 0) + 1
-  })
-
-  let keywords = Object.keys(freq)
-    .sort((a, b) => freq[b] - freq[a])
-    .slice(0, 5)
-
-  let questions = keywords.map(word => {
-  return `What is ${word}?`
-})
-
-// add extra questions
-questions.push("What is the main idea of the text?")
-questions.push("Why is this topic important?")
-
-  navigation.navigate('Quiz', {
-  keywords,
-  questions
-  })
-}
 
   return (
     <View style={{ flex: 1, padding: 20 }}>
+
+      {loading && (
+        <Text style={{ marginBottom: 10, color: 'gray' }}>
+          Analyzing text...
+        </Text>
+      )}
 
       <Text style={{ fontSize: 22, fontWeight: 'bold', marginBottom: 10 }}>
         Enter Academic Text
