@@ -2,7 +2,7 @@ import { View, Text, TextInput, TouchableOpacity } from 'react-native'
 import { useState } from 'react'
 
 export default function Quiz({ route, navigation }) {
-  const { questions } = route.params
+  const { questions, keywords } = route.params
 
   const [answers, setAnswers] = useState(Array(questions.length).fill(""))
 
@@ -14,8 +14,9 @@ export default function Quiz({ route, navigation }) {
 
   const handleSubmit = () => {
     navigation.navigate('Results', {
-      questions,
-      answers
+    keywords,
+    questions,
+    answers
     })
   }
 
