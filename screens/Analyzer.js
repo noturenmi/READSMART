@@ -1,7 +1,7 @@
 import { View, Text, TextInput, TouchableOpacity } from 'react-native'
 import { useState } from 'react'
 
-export default function Analyzer() {
+export default function Analyzer({ navigation }) {
   const [text, setText] = useState('')
 
   const handleAnalyze = () => {
@@ -10,10 +10,8 @@ export default function Analyzer() {
     return
   }
 
-  // convert to lowercase
   let words = text.toLowerCase().split(/\W+/)
 
-  // remove common words
   const stopwords = [
     "the","is","and","a","to","of","in","that","it","on","for","with",
     "as","are","was","were","by","an","be","this","which","or"
@@ -23,18 +21,15 @@ export default function Analyzer() {
     word && !stopwords.includes(word)
   )
 
-  // count frequency
   let freq = {}
   filtered.forEach(word => {
     freq[word] = (freq[word] || 0) + 1
   })
 
-  // sort keywords
   let keywords = Object.keys(freq)
     .sort((a, b) => freq[b] - freq[a])
     .slice(0, 5)
 
-  // simple question generator
   let questions = [
     "What is the main idea of the text?",
     "What are the important keywords mentioned?",
@@ -42,10 +37,10 @@ export default function Analyzer() {
     "What can be learned from the text?"
   ]
 
-  alert(
-    "KEYWORDS:\n" + keywords.join(", ") +
-    "\n\nQUESTIONS:\n" + questions.join("\n")
-  )
+  navigation.navigate('Results', {
+    keywords,
+    questions
+  })
 }
 
   return (
