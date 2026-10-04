@@ -45,19 +45,22 @@ export function AdminDashboardScreen({ navigation }) {
 
   return (
     <Screen>
-      <View style={styles.top}>
-        <AdminHeader title="Administrator dashboard" subtitle={`Welcome, ${user?.name || 'Administrator'}`} />
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Logout"
-          accessibilityHint="Opens a confirmation before ending the administrator session."
-          onPress={() => showLogoutConfirmation(signOut)}
-          style={styles.signOut}
-        >
-          <Ionicons name="log-out-outline" size={20} color={colors.greenDark} />
-          <Text style={styles.signOutText}>Logout</Text>
-        </Pressable>
-      </View>
+      <AdminHeader
+        title="Administrator dashboard"
+        subtitle={`Welcome, ${user?.name || 'Administrator'}`}
+        rightAction={(
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Logout"
+            accessibilityHint="Opens a confirmation before ending the administrator session."
+            onPress={() => showLogoutConfirmation(signOut)}
+            style={styles.signOut}
+          >
+            <Ionicons name="log-out-outline" size={20} color={colors.greenDark} />
+            <Text style={styles.signOutText}>Logout</Text>
+          </Pressable>
+        )}
+      />
 
       <AdminSectionTitle hint="Live totals from the READSMART database.">System Overview</AdminSectionTitle>
       {loading ? <ReadingState kind="loading" title="Loading dashboard…" /> : null}
@@ -107,7 +110,6 @@ export function AdminDashboardScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  top: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   signOut: { minHeight: 40, borderRadius: 13, backgroundColor: colors.greenLight, paddingHorizontal: 11, flexDirection: 'row', gap: 5, alignItems: 'center', justifyContent: 'center' },
   signOutText: { color: colors.greenDark, fontSize: 12, fontWeight: '800' },
   stats: { flexDirection: 'row', flexWrap: 'wrap', gap: 9 },

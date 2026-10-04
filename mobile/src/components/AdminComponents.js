@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Card } from './Screen';
 import { colors } from '../theme';
 
-export function AdminHeader({ title, subtitle, onBack }) {
+export function AdminHeader({ title, subtitle, onBack, rightAction }) {
   return (
     <View style={styles.header}>
       {onBack ? (
@@ -17,6 +17,7 @@ export function AdminHeader({ title, subtitle, onBack }) {
         <Text style={styles.title}>{title}</Text>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
+      {rightAction}
     </View>
   );
 }
@@ -82,7 +83,7 @@ export function AdminInlineActions({ children }) {
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   back: { width: 38, height: 38, marginTop: 2, borderRadius: 13, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, justifyContent: 'center', alignItems: 'center' },
-  headerText: { flex: 1 },
+  headerText: { flex: 1, minWidth: 0 },
   eyebrow: { color: colors.green, fontSize: 10, fontWeight: '800', letterSpacing: 0.9 },
   title: { color: colors.ink, fontSize: 23, lineHeight: 29, fontWeight: '800', marginTop: 5 },
   subtitle: { color: colors.muted, fontSize: 12, lineHeight: 18, marginTop: 4 },
