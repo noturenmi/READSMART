@@ -1,17 +1,13 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
-import { useIsFocused } from '@react-navigation/native';
 import { AssessmentButton } from '../components/AssessmentComponents';
 import { Card, Screen } from '../components/Screen';
 import { ContentSection, ReadingHeader, ReadingParagraph, ReadingState } from '../components/ReadingComponents';
-import { TextToSpeechControls } from '../components/TextToSpeechControls';
 import { api } from '../services/api';
 import { colors } from '../theme';
-import { lessonToSpeechText } from '../utils/textToSpeech';
 
 export function LessonDetailScreen({ navigation, route }) {
   const { lessonId } = route.params;
-  const isFocused = useIsFocused();
   const [lesson, setLesson] = useState(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -30,8 +26,6 @@ export function LessonDetailScreen({ navigation, route }) {
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [attempt, lessonId]);
-
-  const speechText = useMemo(() => lessonToSpeechText(lesson), [lesson]);
 
   async function generateSummary() {
     setSummaryLoading(true);
@@ -60,7 +54,6 @@ export function LessonDetailScreen({ navigation, route }) {
       ) : null}
       {!loading && !failed && lesson ? (
         <>
-          <TextToSpeechControls text={speechText} active={isFocused} />
           <View style={{ gap: 14 }}>
             <ContentSection title="Lesson" hasContent={Boolean(lesson.overview || lesson.lesson)}>
               {lesson.overview ? <Text style={{ color: colors.muted, fontSize: 14, lineHeight: 21 }}>{lesson.overview}</Text> : null}

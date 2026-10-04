@@ -4,15 +4,13 @@ READSMART is a supplementary reading comprehension and writing practice app for 
 
 ## Current development stage
 
-Stage 9 adds administrator monitoring and content management. Stage 8 student progress and one-time XP rewards, Stage 7 device-native text-to-speech, and Stage 6 AI summaries and writing feedback remain supplementary; none replaces official reading or writing assessment results.
+Stage 9 adds administrator monitoring and content management. Stage 8 student progress and one-time XP rewards, and Stage 6 AI summaries and writing feedback remain supplementary; none replaces official reading or writing assessment results.
 
 ## Requirements
 
 - Node.js 20 or newer and npm
 - MongoDB running locally or a MongoDB Atlas connection string
 - Expo Go on Android for device testing
-
-The mobile app uses the Expo SDK 57-compatible `expo-speech` package. Android supports play and stop; Expo Speech does not expose pause/resume on Android. iOS and web use the package's native pause/resume functions when available.
 
 ## Backend setup
 
@@ -83,7 +81,7 @@ The bootstrap command refuses to promote an existing student account.
 
 Allow inbound connections to port 3000 in the development computer's firewall for physical-device testing. The mobile app contains no MongoDB URI, JWT secret, or administrator credential. Its public API URL is configuration, not a secret.
 
-Run mobile text-preparation and mocked speech-control tests with `npm test` from `mobile/`. Export the Android JavaScript bundle with `npx expo export --platform android` from `mobile/`.
+Run the mobile test suite with `npm test` from `mobile/`. Export the Android JavaScript bundle with `npx expo export --platform android` from `mobile/`.
 
 ## API endpoints
 
@@ -128,7 +126,7 @@ Run mobile text-preparation and mocked speech-control tests with `npm test` from
 
 Successful responses use `{ "success": true, "data": ... }`; errors use `{ "success": false, "error": ... }`. Access tokens are JWTs with a one-hour default lifetime. The app stores the token with Expo SecureStore and removes it on logout.
 
-Progress is calculated from the student's saved assessment attempts and writing submissions against currently published lessons, questions, and writing activities. A lesson counts once toward overall completion if the student has completed either learning activity. The backend awards 20 XP once per lesson for a reading assessment and 25 XP once per lesson for a writing activity; opening lessons, summaries, AI feedback, and text-to-speech do not award XP. Levels use `floor(totalXP / 100) + 1`. Progress records are initialized on demand; XP rewards are protected by a unique per-user/activity/lesson ledger key.
+Progress is calculated from the student's saved assessment attempts and writing submissions against currently published lessons, questions, and writing activities. A lesson counts once toward overall completion if the student has completed either learning activity. The backend awards 20 XP once per lesson for a reading assessment and 25 XP once per lesson for a writing activity; opening lessons, summaries, and AI feedback do not award XP. Levels use `floor(totalXP / 100) + 1`. Progress records are initialized on demand; XP rewards are protected by a unique per-user/activity/lesson ledger key.
 
 Administrator accounts are created only through the existing `npm run create-admin` bootstrap command. Public registration always creates a student. All `/api/admin/*` management routes verify both the JWT and the database-backed `admin` role. Admin content changes publish/unpublish or update records; they do not delete assessment attempts, writing submissions, progress, or XP records.
 
