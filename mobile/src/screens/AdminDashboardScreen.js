@@ -8,6 +8,7 @@ import { AdminCard, AdminHeader, AdminSectionTitle } from '../components/AdminCo
 import { useAuth } from '../auth/AuthContext';
 import { api } from '../services/api';
 import { colors } from '../theme';
+import { showLogoutConfirmation } from '../utils/logoutConfirmation';
 
 const statTiles = [
   ['totalStudents', 'Students', 'people-outline'],
@@ -46,8 +47,15 @@ export function AdminDashboardScreen({ navigation }) {
     <Screen>
       <View style={styles.top}>
         <AdminHeader title="Administrator dashboard" subtitle={`Welcome, ${user?.name || 'Administrator'}`} />
-        <Pressable accessibilityRole="button" accessibilityLabel="Sign out" onPress={signOut} style={styles.signOut}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Logout"
+          accessibilityHint="Opens a confirmation before ending the administrator session."
+          onPress={() => showLogoutConfirmation(signOut)}
+          style={styles.signOut}
+        >
           <Ionicons name="log-out-outline" size={20} color={colors.greenDark} />
+          <Text style={styles.signOutText}>Logout</Text>
         </Pressable>
       </View>
 
@@ -100,7 +108,8 @@ export function AdminDashboardScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   top: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-  signOut: { width: 40, height: 40, borderRadius: 13, backgroundColor: colors.greenLight, alignItems: 'center', justifyContent: 'center' },
+  signOut: { minHeight: 40, borderRadius: 13, backgroundColor: colors.greenLight, paddingHorizontal: 11, flexDirection: 'row', gap: 5, alignItems: 'center', justifyContent: 'center' },
+  signOutText: { color: colors.greenDark, fontSize: 12, fontWeight: '800' },
   stats: { flexDirection: 'row', flexWrap: 'wrap', gap: 9 },
   stat: { flexBasis: '30%', flexGrow: 1, minWidth: 96, padding: 12, gap: 5 },
   value: { color: colors.ink, fontSize: 21, fontWeight: '800' },
