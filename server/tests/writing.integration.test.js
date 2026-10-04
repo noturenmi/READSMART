@@ -134,6 +134,48 @@ test('authenticated students retrieve the published activity for its lesson only
   assert.equal(missingLesson.status, 404);
 });
 
+test('subject-to-lesson writing flow resolves and accepts one writing submission for every subject', async () => {
+  const flowStudent = await User.create({
+    name: 'Writing Flow Student',
+    email: 'writing-flow@example.com',
+    passwordHash: 'not-used-by-this-test',
+    role: 'student',
+  });
+  const flowToken = createToken(flowStudent);
+  const subjectsResponse = await request(app)
+    .get('/api/subjects')
+    .set({ Authorization: 'Bearer ' + flowToken });
+  assert.equal(subjectsResponse.status, 200);
+  assert.deepEqual(subjectsResponse.body.data.subjects.map((subject) => subject.code), ['MIL', 'UCSP', 'CPAR', 'ELS']);
+
+  for (const subject of subjectsResponse.body.data.subjects) {
+    const lessonsResponse = await request(app)
+      .get('/api/subjects/' + subject.id + '/lessons')
+      .set({ Authorization: 'Bearer ' + flowToken });
+    assert.equal(lessonsResponse.status, 200);
+    assert.equal(lessonsResponse.body.data.lessons.length, 10);
+
+    const lesson = lessonsResponse.body.data.lessons[0];
+    const activityResponse = await request(app)
+      .get('/api/lessons/' + lesson.id + '/writing')
+      .set({ Authorization: 'Bearer ' + flowToken });
+    assert.equal(activityResponse.status, 200);
+    assert.equal(activityResponse.body.data.activity.lessonId, lesson.id);
+
+    const submissionResponse = await request(app)
+      .post('/api/lessons/' + lesson.id + '/writing')
+      .set({ Authorization: 'Bearer ' + flowToken })
+      .send({
+        writingActivityId: activityResponse.body.data.activity.id,
+        response: sampleResponse,
+      });
+    assert.equal(submissionResponse.status, 201);
+    assert.equal(submissionResponse.body.data.lesson.id, lesson.id);
+    assert.equal(submissionResponse.body.data.writingActivity.id, activityResponse.body.data.activity.id);
+    assert.equal(submissionResponse.body.data.maxScore, 25);
+  }
+});
+
 test('unpublished activities are not returned to students', async () => {
   const lesson = await getMilLesson(1);
   const activity = await WritingActivity.findOne({ lesson: lesson._id });

@@ -2,9 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { Screen } from '../components/Screen';
 import { LessonCard, ReadingHeader, ReadingState } from '../components/ReadingComponents';
 import { api } from '../services/api';
+import { getLearningFlow } from '../utils/learningFlow';
 
 export function ReadingLessonsScreen({ navigation, route }) {
-  const { subjectId, subjectName, subjectCode } = route.params;
+  const { subjectId, subjectName, subjectCode, flow } = route.params;
+  const learningFlow = getLearningFlow(flow);
   const [subject, setSubject] = useState(null);
   const [lessons, setLessons] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -30,8 +32,8 @@ export function ReadingLessonsScreen({ navigation, route }) {
     <Screen>
       <ReadingHeader
         title={subject?.name || subjectName}
-        subtitle={subject?.availableLessonCount > 0 ? `${subject.availableLessonCount} published lessons` : 'Lessons for this subject'}
-        eyebrow={subject?.code || subjectCode || 'SUBJECT'}
+        subtitle={learningFlow.lessonsSubtitle(subject)}
+        eyebrow={learningFlow.lessonsEyebrow(subject, subjectCode)}
         onBack={() => navigation.goBack()}
       />
       {loading ? <ReadingState kind="loading" title="Loading lessons..." /> : null}
@@ -39,10 +41,18 @@ export function ReadingLessonsScreen({ navigation, route }) {
         <ReadingState kind="error" title="Unable to load lessons." message="Please check your connection and try again." onRetry={() => setAttempt((value) => value + 1)} />
       ) : null}
       {!loading && !failed && lessons.length === 0 ? (
-        <ReadingState kind="empty" title="No published lessons yet." message="Lesson content is being prepared for this subject." />
+        <ReadingState
+          kind="empty"
+          title={learningFlow.noLessonsTitle}
+          message={learningFlow.noLessonsMessage}
+        />
       ) : null}
       {!loading && !failed ? lessons.map((lesson) => (
-        <LessonCard key={lesson.id} lesson={lesson} onPress={() => navigation.navigate('Lesson', { lessonId: lesson.id })} />
+        <LessonCard
+          key={lesson.id}
+          lesson={lesson}
+          onPress={() => navigation.navigate(learningFlow.destination, learningFlow.lessonParams(lesson))}
+        />
       )) : null}
     </Screen>
   );
