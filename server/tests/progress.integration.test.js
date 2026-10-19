@@ -123,6 +123,13 @@ test('authenticated student progress is initialized from the real catalog and pr
   assert.equal(subjectResult.status, 200);
   assert.equal(subjectResult.body.data.subjects.length, 4);
   assert.ok(subjectResult.body.data.subjects.every((subject) => subject.totalLessons === 10 && subject.completedLessons === 0));
+  assert.ok(subjectResult.body.data.subjects.every((subject) => (
+    subject.completedReadingAssessments === 0
+    && subject.totalReadingAssessments === 10
+    && subject.completedWritingActivities === 0
+    && subject.totalWritingActivities === 10
+    && subject.totalXP === 0
+  )));
 
   const otherStudent = await request(app).get(`/api/progress/me?userId=${studentA.id}`).set({ Authorization: `Bearer ${tokenB}` });
   assert.equal(otherStudent.status, 200);
@@ -181,6 +188,11 @@ test('reading and writing completions award XP once and progress counts unique a
   assert.equal(milProgress.completedLessons, 4);
   assert.equal(milProgress.totalLessons, 10);
   assert.equal(milProgress.percentage, 40);
+  assert.equal(milProgress.completedReadingAssessments, 4);
+  assert.equal(milProgress.totalReadingAssessments, 10);
+  assert.equal(milProgress.completedWritingActivities, 1);
+  assert.equal(milProgress.totalWritingActivities, 10);
+  assert.equal(milProgress.totalXP, 105);
   assert.ok(subjectProgress.body.data.subjects.filter((subject) => subject.subjectCode !== 'MIL').every(({ completedLessons }) => completedLessons === 0));
 
   const forbiddenWrite = await request(app).post('/api/progress/me')
@@ -191,4 +203,54 @@ test('reading and writing completions award XP once and progress counts unique a
   assert.equal(afterForbiddenWrite.body.data.totalXP, 105);
   assert.equal(afterForbiddenWrite.body.data.level, 2);
   assert.equal(await ActivityRecord.countDocuments({ user: studentA._id }), 5);
+});
+
+test('subject progress counts unique reading and writing work across all subjects and safely handles an empty subject', async () => {
+  for (const subject of subjects) {
+    const lesson = await Lesson.findOne({ subject: subject._id, lessonNumber: 1, isPublished: true, contentStatus: 'ready' });
+    const questions = await ReadingQuestion.find({ lesson: lesson._id, isPublished: true }).sort({ order: 1 }).lean();
+    const readingResponse = await request(app)
+      .post(`/api/lessons/${lesson._id}/assessment`)
+      .set({ Authorization: `Bearer ${tokenB}` })
+      .send({ answers: questions.map(({ _id }) => ({ questionId: String(_id), selectedAnswer: 0 })) });
+    assert.equal(readingResponse.status, 201);
+
+    const activity = await WritingActivity.findOne({ lesson: lesson._id, isPublished: true });
+    const writingResponseForLesson = await request(app)
+      .post(`/api/lessons/${lesson._id}/writing`)
+      .set({ Authorization: `Bearer ${tokenB}` })
+      .send({ writingActivityId: String(activity._id), response: writingResponse });
+    assert.equal(writingResponseForLesson.status, 201);
+  }
+
+  const emptySubject = await Subject.create({ name: 'Empty Subject', code: 'EMPTY', order: 99, isActive: true });
+  const response = await request(app).get('/api/progress/subjects').set({ Authorization: `Bearer ${tokenB}` });
+  assert.equal(response.status, 200);
+  assert.equal(response.body.data.subjects.length, 5);
+
+  for (const code of ['MIL', 'UCSP', 'CPAR', 'ELS']) {
+    const subjectProgress = response.body.data.subjects.find(({ subjectCode }) => subjectCode === code);
+    assert.equal(subjectProgress.completedLessons, 1);
+    assert.equal(subjectProgress.totalLessons, 10);
+    assert.equal(subjectProgress.percentage, 10);
+    assert.equal(subjectProgress.completedReadingAssessments, 1);
+    assert.equal(subjectProgress.totalReadingAssessments, 10);
+    assert.equal(subjectProgress.completedWritingActivities, 1);
+    assert.equal(subjectProgress.totalWritingActivities, 10);
+    assert.equal(subjectProgress.totalXP, 45);
+  }
+
+  const emptyProgress = response.body.data.subjects.find(({ subjectId }) => subjectId === String(emptySubject._id));
+  assert.equal(emptyProgress.completedLessons, 0);
+  assert.equal(emptyProgress.totalLessons, 0);
+  assert.equal(emptyProgress.percentage, 0);
+  assert.equal(emptyProgress.completedReadingAssessments, 0);
+  assert.equal(emptyProgress.totalReadingAssessments, 0);
+  assert.equal(emptyProgress.completedWritingActivities, 0);
+  assert.equal(emptyProgress.totalWritingActivities, 0);
+  assert.equal(emptyProgress.totalXP, 0);
+
+  const studentAProgress = await request(app).get('/api/progress/subjects').set({ Authorization: `Bearer ${tokenA}` });
+  assert.ok(studentAProgress.body.data.subjects.every(({ totalXP }) => totalXP === 105 || totalXP === 0));
+  assert.equal(studentAProgress.body.data.subjects.find(({ subjectCode }) => subjectCode === 'UCSP').completedLessons, 0);
 });

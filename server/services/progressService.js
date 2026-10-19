@@ -50,7 +50,7 @@ async function readProgressSnapshot(userId, { includeRecent = true } = {}) {
     : [[], []];
   const assessmentLessonSet = asIdSet(assessmentLessons);
   const activityIds = writingActivities.map(({ _id }) => _id);
-  const [attemptLessons, submittedLessons, xpTotals, latestAttempt, latestWriting] = await Promise.all([
+  const [attemptLessons, submittedLessons, submittedWritingActivities, xpTotals, subjectXpTotals, latestAttempt, latestWriting] = await Promise.all([
     assessmentLessons.length
       ? AssessmentAttempt.distinct('lesson', { user: userObjectId, lesson: { $in: assessmentLessons } })
       : [],
@@ -61,10 +61,19 @@ async function readProgressSnapshot(userId, { includeRecent = true } = {}) {
         writingActivity: { $in: activityIds },
       })
       : [],
+    activityIds.length
+      ? WritingSubmission.distinct('writingActivity', { user: userObjectId, writingActivity: { $in: activityIds } })
+      : [],
     ActivityRecord.aggregate([
       { $match: { user: userObjectId } },
       { $group: { _id: null, totalXP: { $sum: '$xpEarned' } } },
     ]),
+    subjectIds.length
+      ? ActivityRecord.aggregate([
+        { $match: { user: userObjectId, subject: { $in: subjectIds } } },
+        { $group: { _id: '$subject', totalXP: { $sum: '$xpEarned' } } },
+      ])
+      : [],
     assessmentLessons.length
       ? AssessmentAttempt.findOne({ user: userObjectId, lesson: { $in: assessmentLessons } })
         .sort({ submittedAt: -1 }).select('submittedAt').lean()
@@ -77,6 +86,8 @@ async function readProgressSnapshot(userId, { includeRecent = true } = {}) {
 
   const readingDone = asIdSet(attemptLessons.filter((lessonId) => assessmentLessonSet.has(String(lessonId))));
   const writingDone = asIdSet(submittedLessons);
+  const writingActivityDone = asIdSet(submittedWritingActivities);
+  const subjectXPById = new Map(subjectXpTotals.map(({ _id, totalXP: xp }) => [String(_id), xp]));
   const completedLessonIds = new Set([...readingDone, ...writingDone]);
   const totalXP = xpTotals[0]?.totalXP || 0;
   const level = calculateLevel(totalXP);
@@ -119,6 +130,9 @@ async function readProgressSnapshot(userId, { includeRecent = true } = {}) {
   const subjectsProgress = subjects.map((subject) => {
     const subjectLessons = lessons.filter((lesson) => String(lesson.subject) === String(subject._id));
     const subjectDone = subjectLessons.filter((lesson) => completedLessonIds.has(String(lesson._id))).length;
+    const subjectLessonIds = asIdSet(subjectLessons.map(({ _id }) => _id));
+    const subjectAssessmentLessons = subjectLessons.filter(({ _id }) => assessmentLessonSet.has(String(_id)));
+    const subjectWritingActivities = writingActivities.filter(({ lesson }) => subjectLessonIds.has(String(lesson)));
     return {
       subjectId: String(subject._id),
       subjectCode: subject.code,
@@ -126,6 +140,11 @@ async function readProgressSnapshot(userId, { includeRecent = true } = {}) {
       completedLessons: subjectDone,
       totalLessons: subjectLessons.length,
       percentage: calculatePercentage(subjectDone, subjectLessons.length),
+      completedReadingAssessments: subjectAssessmentLessons.filter(({ _id }) => readingDone.has(String(_id))).length,
+      totalReadingAssessments: subjectAssessmentLessons.length,
+      completedWritingActivities: subjectWritingActivities.filter(({ _id }) => writingActivityDone.has(String(_id))).length,
+      totalWritingActivities: subjectWritingActivities.length,
+      totalXP: subjectXPById.get(String(subject._id)) || 0,
     };
   });
 

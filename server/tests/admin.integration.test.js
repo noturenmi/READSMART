@@ -153,6 +153,11 @@ test('admin dashboard and student endpoints return safe account and calculated p
   assert.equal(progress.body.data.progress.level, 1);
   assert.equal(progress.body.data.progress.totalXP, 0);
   assert.equal(progress.body.data.subjects.length, 4);
+  assert.ok(progress.body.data.subjects.every((subject) => (
+    subject.completedReadingAssessments === 0
+    && subject.completedWritingActivities === 0
+    && subject.totalXP === 0
+  )));
   assert.ok(await StudentProgress.exists({ user: student._id }));
 
   const invalidPagination = await asAdmin(request(app).get('/api/admin/users?limit=200'));

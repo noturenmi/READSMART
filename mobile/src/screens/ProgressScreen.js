@@ -72,19 +72,29 @@ export function ProgressScreen() {
           </View>
 
           <View style={styles.sectionHeading}>
-            <Text style={styles.sectionTitle}>Subject Progress</Text>
+            <Text style={styles.sectionTitle}>Progress by Subject</Text>
             <Text style={styles.sectionHint}>A lesson counts when you complete a reading assessment or writing activity.</Text>
           </View>
           {subjects.length ? subjects.map((subject) => (
             <Card key={subject.subjectId} style={styles.subjectCard}>
               <View style={styles.subjectTop}>
                 <View style={styles.subjectText}>
+                  <Text style={styles.subjectCode}>{subject.subjectCode}</Text>
                   <Text style={styles.subjectName}>{subject.subjectName}</Text>
                   <Text style={styles.subjectCount}>{subject.completedLessons} / {subject.totalLessons} lessons completed</Text>
                 </View>
                 <Text style={styles.subjectPercentage}>{subject.percentage}%</Text>
               </View>
               <ProgressBar percentage={subject.percentage} label={`${subject.subjectName} progress`} />
+              <View style={styles.subjectActivity}>
+                <Text style={styles.subjectActivityText}>
+                  Reading assessments: {subject.completedReadingAssessments} / {subject.totalReadingAssessments}
+                </Text>
+                <Text style={styles.subjectActivityText}>
+                  Writing activities: {subject.completedWritingActivities} / {subject.totalWritingActivities}
+                </Text>
+              </View>
+              <Text style={styles.subjectXP}>{subject.totalXP} XP earned in this subject</Text>
             </Card>
           )) : (
             <Card style={styles.emptyCard}>
@@ -181,9 +191,13 @@ const styles = StyleSheet.create({
   subjectCard: { gap: 10, padding: 15 },
   subjectTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   subjectText: { flex: 1, minWidth: 0 },
+  subjectCode: { color: colors.green, fontSize: 10, fontWeight: '800', letterSpacing: 0.7 },
   subjectName: { color: colors.ink, fontSize: 14, lineHeight: 20, fontWeight: '700', flexShrink: 1 },
   subjectCount: { color: colors.muted, fontSize: 11, lineHeight: 16, marginTop: 3 },
   subjectPercentage: { color: colors.greenDark, fontSize: 13, fontWeight: '800' },
+  subjectActivity: { gap: 3 },
+  subjectActivityText: { color: colors.muted, fontSize: 11, lineHeight: 16 },
+  subjectXP: { color: colors.greenDark, fontSize: 12, fontWeight: '700' },
   activityCard: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 13 },
   activityIcon: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.greenLight },
   activityCopy: { flex: 1, minWidth: 0 },

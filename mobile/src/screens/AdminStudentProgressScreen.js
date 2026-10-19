@@ -52,11 +52,17 @@ export function AdminStudentProgressScreen({ navigation, route }) {
           {(data.subjects || []).map((subject) => (
             <AdminCard key={subject.subjectId} style={styles.subject}>
               <View style={styles.subjectRow}>
-                <Text style={styles.subjectName}>{subject.subjectName}</Text>
+                <View style={styles.subjectCopy}>
+                  <Text style={styles.subjectCode}>{subject.subjectCode}</Text>
+                  <Text style={styles.subjectName}>{subject.subjectName}</Text>
+                </View>
                 <Text style={styles.percent}>{subject.percentage}%</Text>
               </View>
               <Text style={styles.caption}>{subject.completedLessons} / {subject.totalLessons} lessons</Text>
               <ProgressBar percentage={subject.percentage} />
+              <Text style={styles.caption}>Reading assessments: {subject.completedReadingAssessments} / {subject.totalReadingAssessments}</Text>
+              <Text style={styles.caption}>Writing activities: {subject.completedWritingActivities} / {subject.totalWritingActivities}</Text>
+              <Text style={styles.subjectXP}>{subject.totalXP} XP earned in this subject</Text>
             </AdminCard>
           ))}
         </>
@@ -96,6 +102,9 @@ const styles = StyleSheet.create({
   heading: { color: colors.greenDark, fontSize: 16, fontWeight: '800' },
   subject: { gap: 8, padding: 14 },
   subjectRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
-  subjectName: { flex: 1, color: colors.ink, fontSize: 13, lineHeight: 18, fontWeight: '700' },
+  subjectCopy: { flex: 1, minWidth: 0 },
+  subjectCode: { color: colors.green, fontSize: 9, fontWeight: '800', letterSpacing: 0.7 },
+  subjectName: { color: colors.ink, fontSize: 13, lineHeight: 18, fontWeight: '700' },
   percent: { color: colors.greenDark, fontSize: 12, fontWeight: '800' },
+  subjectXP: { color: colors.greenDark, fontSize: 11, lineHeight: 16, fontWeight: '700' },
 });
