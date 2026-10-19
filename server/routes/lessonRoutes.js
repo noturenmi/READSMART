@@ -12,6 +12,7 @@ function createLessonRoutes(config) {
   const aiController = createAIController(config);
   router.get('/:lessonId/questions', assessmentController.getQuestions);
   router.post('/:lessonId/assessment', authorizeRole('student'), assessmentController.validateAssessmentBody, assessmentController.submitAssessment);
+  router.get('/:lessonId/assessment-attempts/:attemptId/review', authorizeRole('student'), assessmentController.getAssessmentReview);
   router.get('/:lessonId/assessment-attempts', assessmentController.getAttempts);
   router.get('/:lessonId/writing', writingController.getActivity);
   router.post('/:lessonId/writing', authorizeRole('student'), writingController.validateSubmission, writingController.submitActivity);

@@ -7,6 +7,7 @@ const { MongoMemoryServer } = require('mongodb-memory-server');
 const { connectDatabase } = require('../config/database');
 const { createApp } = require('../app');
 const AssessmentAttempt = require('../models/AssessmentAttempt');
+const ActivityRecord = require('../models/ActivityRecord');
 const Lesson = require('../models/Lesson');
 const ReadingQuestion = require('../models/ReadingQuestion');
 const Subject = require('../models/Subject');
@@ -201,6 +202,8 @@ test('submission is server-scored, saved, and attempt history is private to the 
   assert.equal(attemptResponseB.body.data.attempts.length, 1);
   assert.equal(attemptResponseA.body.data.attempts[0].id, result.attemptId);
   assert.notEqual(attemptResponseA.body.data.attempts[0].id, studentBSubmit.body.data.attemptId);
+  assert.equal(Object.hasOwn(attemptResponseA.body.data.attempts[0].answers[0], 'correctAnswer'), false);
+  assert.equal(Object.hasOwn(attemptResponseA.body.data.attempts[0].answers[0], 'choices'), false);
   assert.equal((await request(app).get(`/api/lessons/${lesson.id}/assessment-attempts`)).status, 401);
 });
 
@@ -228,4 +231,107 @@ test('assessment submission rejects missing, invalid, duplicate, and foreign que
   assert.equal(malformed.status, 400);
   const badLesson = await request(app).get('/api/lessons/not-an-id/questions').set(auth);
   assert.equal(badLesson.status, 400);
+});
+
+test('student can review incorrect answers from their completed attempt without exposing answers early or awarding more XP', async () => {
+  const mil = await Subject.findOne({ code: 'MIL' });
+  const lesson = await Lesson.findOne({ subject: mil._id, lessonNumber: 1 });
+  const questions = await ReadingQuestion.find({ lesson: lesson._id, isPublished: true })
+    .select('+correctAnswer')
+    .sort({ order: 1 })
+    .lean();
+  const answers = questions.map((question, index) => ({
+    questionId: String(question._id),
+    selectedAnswer: index === 1 ? (question.correctAnswer + 1) % 4 : question.correctAnswer,
+  }));
+  const submitted = await request(app)
+    .post(`/api/lessons/${lesson.id}/assessment`)
+    .set({ Authorization: `Bearer ${tokenA}` })
+    .send({ answers });
+  assert.equal(submitted.status, 201);
+
+  const publicQuestions = await request(app)
+    .get(`/api/lessons/${lesson.id}/questions`)
+    .set({ Authorization: `Bearer ${tokenA}` });
+  assert.equal(publicQuestions.status, 200);
+  assert.ok(publicQuestions.body.data.questions.every((question) => !Object.hasOwn(question, 'correctAnswer')));
+  assert.ok(publicQuestions.body.data.questions.every((question) => !Object.hasOwn(question, 'explanation')));
+
+  const activityCount = await ActivityRecord.countDocuments({ user: studentA._id, activityType: 'reading_assessment', lesson: lesson._id });
+  const reviewPath = `/api/lessons/${lesson.id}/assessment-attempts/${submitted.body.data.attemptId}/review`;
+  const unauthenticated = await request(app).get(reviewPath);
+  assert.equal(unauthenticated.status, 401);
+  const otherStudent = await request(app).get(reviewPath).set({ Authorization: `Bearer ${tokenB}` });
+  assert.equal(otherStudent.status, 404);
+  assert.equal(otherStudent.body.error.code, 'ATTEMPT_NOT_FOUND');
+  const invalidAttempt = await request(app)
+    .get(`/api/lessons/${lesson.id}/assessment-attempts/not-an-id/review`)
+    .set({ Authorization: `Bearer ${tokenA}` });
+  assert.equal(invalidAttempt.status, 400);
+
+  const review = await request(app).get(reviewPath).set({ Authorization: `Bearer ${tokenA}` });
+  assert.equal(review.status, 200);
+  assert.equal(review.body.data.allCorrect, false);
+  assert.equal(review.body.data.lesson.title, lesson.title);
+  assert.equal(review.body.data.lesson.subject.name, mil.name);
+  assert.equal(review.body.data.incorrectAnswers.length, 1);
+  const incorrect = review.body.data.incorrectAnswers[0];
+  const sourceQuestion = questions.find(({ _id }) => String(_id) === incorrect.questionId);
+  assert.equal(incorrect.question, sourceQuestion.question);
+  assert.equal(incorrect.yourAnswer, sourceQuestion.choices[answers[1].selectedAnswer]);
+  assert.equal(incorrect.correctAnswer, sourceQuestion.choices[sourceQuestion.correctAnswer]);
+  assert.equal(incorrect.explanation, sourceQuestion.explanation);
+  await ReadingQuestion.deleteOne({ _id: sourceQuestion._id });
+  try {
+    const afterDeletion = await request(app).get(reviewPath).set({ Authorization: `Bearer ${tokenA}` });
+    assert.equal(afterDeletion.status, 200);
+    assert.equal(afterDeletion.body.data.incorrectAnswers[0].question, sourceQuestion.question);
+    assert.equal(afterDeletion.body.data.incorrectAnswers[0].correctAnswer, sourceQuestion.choices[sourceQuestion.correctAnswer]);
+    assert.equal(afterDeletion.body.data.incorrectAnswers[0].questionAvailable, true);
+  } finally {
+    await ReadingQuestion.create(sourceQuestion);
+  }
+  assert.equal(await ActivityRecord.countDocuments({ user: studentA._id, activityType: 'reading_assessment', lesson: lesson._id }), activityCount);
+});
+
+test('all-correct attempts return a positive review state and deleted question records are handled safely', async () => {
+  const mil = await Subject.findOne({ code: 'MIL' });
+  const lesson = await Lesson.findOne({ subject: mil._id, lessonNumber: 2 });
+  const questions = await ReadingQuestion.find({ lesson: lesson._id, isPublished: true })
+    .select('+correctAnswer')
+    .lean();
+  const answers = questions.map(({ _id, correctAnswer }) => ({ questionId: String(_id), selectedAnswer: correctAnswer }));
+  const submitted = await request(app)
+    .post(`/api/lessons/${lesson.id}/assessment`)
+    .set({ Authorization: `Bearer ${tokenA}` })
+    .send({ answers });
+  assert.equal(submitted.status, 201);
+  const path = `/api/lessons/${lesson.id}/assessment-attempts/${submitted.body.data.attemptId}/review`;
+  const allCorrect = await request(app).get(path).set({ Authorization: `Bearer ${tokenA}` });
+  assert.equal(allCorrect.status, 200);
+  assert.equal(allCorrect.body.data.allCorrect, true);
+  assert.deepEqual(allCorrect.body.data.incorrectAnswers, []);
+
+  const missingQuestionId = new mongoose.Types.ObjectId();
+  const orphanAttempt = await AssessmentAttempt.create({
+    user: studentA._id,
+    lesson: lesson._id,
+    answers: [{ questionId: missingQuestionId, selectedAnswer: 0, isCorrect: false, pointsEarned: 0 }],
+    score: 0,
+    totalItems: 1,
+    totalPoints: 1,
+    percentage: 0,
+  });
+  try {
+    const orphanReview = await request(app)
+      .get(`/api/lessons/${lesson.id}/assessment-attempts/${orphanAttempt.id}/review`)
+      .set({ Authorization: `Bearer ${tokenA}` });
+    assert.equal(orphanReview.status, 200);
+    assert.equal(orphanReview.body.data.incorrectAnswers.length, 1);
+    assert.equal(orphanReview.body.data.incorrectAnswers[0].questionAvailable, false);
+    assert.equal(orphanReview.body.data.incorrectAnswers[0].yourAnswer, null);
+    assert.equal(orphanReview.body.data.incorrectAnswers[0].correctAnswer, null);
+  } finally {
+    await AssessmentAttempt.deleteOne({ _id: orphanAttempt._id });
+  }
 });

@@ -130,6 +130,12 @@ export const api = {
   getAssessmentAttempts(lessonId) {
     return request(`/lessons/${encodeURIComponent(lessonId)}/assessment-attempts`, { authenticated: true });
   },
+  getAssessmentReview(lessonId, attemptId) {
+    return request(
+      `/lessons/${encodeURIComponent(lessonId)}/assessment-attempts/${encodeURIComponent(attemptId)}/review`,
+      { authenticated: true },
+    );
+  },
   getWritingActivities() {
     return request('/writing/activities', { authenticated: true });
   },

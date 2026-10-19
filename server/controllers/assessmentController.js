@@ -14,6 +14,12 @@ function validateLessonId(lessonId) {
   }
 }
 
+function validateAttemptId(attemptId) {
+  if (!objectId.test(attemptId) || !mongoose.Types.ObjectId.isValid(attemptId)) {
+    throw new AppError('Enter a valid assessment attempt ID.', 400, 'INVALID_ATTEMPT_ID');
+  }
+}
+
 const submitSchema = z.object({
   answers: z.array(z.object({
     questionId: z.string().regex(objectId, 'Enter a valid question ID.'),
@@ -42,4 +48,14 @@ const getAttempts = asyncHandler(async (req, res) => {
   return sendSuccess(res, 200, await assessmentService.getAssessmentAttempts(req.user.id, req.params.lessonId));
 });
 
-module.exports = { getAttempts, getQuestions, submitAssessment, validateAssessmentBody };
+const getAssessmentReview = asyncHandler(async (req, res) => {
+  validateLessonId(req.params.lessonId);
+  validateAttemptId(req.params.attemptId);
+  return sendSuccess(res, 200, await assessmentService.getAssessmentReview(
+    req.user.id,
+    req.params.lessonId,
+    req.params.attemptId,
+  ));
+});
+
+module.exports = { getAssessmentReview, getAttempts, getQuestions, submitAssessment, validateAssessmentBody };

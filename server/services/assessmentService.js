@@ -70,6 +70,11 @@ async function submitLessonAssessment(userId, lessonId, submittedAnswers) {
       isCorrect,
       pointsEarned: isCorrect ? question.points : 0,
       explanation: question.explanation,
+      questionText: question.question,
+      choices: question.choices,
+      correctAnswer: question.correctAnswer,
+      questionType: question.questionType,
+      order: question.order,
     };
   });
 
@@ -81,11 +86,28 @@ async function submitLessonAssessment(userId, lessonId, submittedAnswers) {
   const attempt = await AssessmentAttempt.create({
     user: userId,
     lesson: lesson._id,
-    answers: answers.map(({ questionId, selectedAnswer, isCorrect, pointsEarned }) => ({
+    answers: answers.map(({
       questionId,
       selectedAnswer,
       isCorrect,
       pointsEarned,
+      questionText,
+      choices,
+      correctAnswer,
+      explanation,
+      questionType,
+      order,
+    }) => ({
+      questionId,
+      selectedAnswer,
+      isCorrect,
+      pointsEarned,
+      questionText,
+      choices,
+      correctAnswer,
+      explanation,
+      questionType,
+      order,
     })),
     score,
     totalItems,
@@ -135,4 +157,74 @@ async function getAssessmentAttempts(userId, lessonId) {
   };
 }
 
-module.exports = { feedbackFor, getAssessmentAttempts, getLessonQuestions, submitLessonAssessment };
+async function getAssessmentReview(userId, lessonId, attemptId) {
+  const attempt = await AssessmentAttempt.findOne({
+    _id: attemptId,
+    user: userId,
+    lesson: lessonId,
+  }).select(
+    '+answers.questionText +answers.choices +answers.correctAnswer +answers.explanation +answers.questionType +answers.order',
+  ).lean();
+  if (!attempt) throw new AppError('Assessment attempt not found.', 404, 'ATTEMPT_NOT_FOUND');
+
+  const [lesson, questions] = await Promise.all([
+    Lesson.findById(lessonId)
+      .select('title subject')
+      .populate('subject', 'name code')
+      .lean(),
+    ReadingQuestion.find({
+      _id: { $in: attempt.answers.map(({ questionId }) => questionId) },
+      lesson: lessonId,
+    })
+      .select('question questionType choices explanation order +correctAnswer')
+      .lean(),
+  ]);
+
+  const questionById = new Map(questions.map((question) => [String(question._id), question]));
+  const incorrectAnswers = attempt.answers
+    .map((answer, index) => {
+      if (answer.isCorrect) return null;
+      const question = questionById.get(String(answer.questionId));
+      const hasSnapshot = Boolean(answer.questionText && answer.choices?.length && Number.isInteger(answer.correctAnswer));
+      const questionText = answer.questionText || question?.question;
+      const choices = hasSnapshot ? answer.choices : question?.choices;
+      const correctAnswerIndex = Number.isInteger(answer.correctAnswer) ? answer.correctAnswer : question?.correctAnswer;
+      const selectedAnswer = choices?.[answer.selectedAnswer] || null;
+      const correctAnswer = choices?.[correctAnswerIndex] || null;
+      return {
+        questionId: String(answer.questionId),
+        question: questionText || 'This question is no longer available.',
+        questionType: answer.questionType || question?.questionType || null,
+        order: answer.order || question?.order || index + 1,
+        yourAnswer: selectedAnswer,
+        correctAnswer,
+        explanation: answer.explanation || question?.explanation || null,
+        questionAvailable: Boolean(hasSnapshot || question),
+      };
+    })
+    .filter(Boolean);
+
+  const subject = lesson?.subject && lesson.subject._id
+    ? { id: String(lesson.subject._id), name: lesson.subject.name, code: lesson.subject.code }
+    : null;
+
+  return {
+    attempt: {
+      id: String(attempt._id),
+      score: attempt.score,
+      totalItems: attempt.totalItems,
+      totalPoints: attempt.totalPoints,
+      percentage: attempt.percentage,
+      submittedAt: attempt.submittedAt,
+    },
+    lesson: {
+      id: String(lessonId),
+      title: lesson?.title || 'Lesson no longer available',
+      subject,
+    },
+    allCorrect: incorrectAnswers.length === 0,
+    incorrectAnswers,
+  };
+}
+
+module.exports = { feedbackFor, getAssessmentAttempts, getAssessmentReview, getLessonQuestions, submitLessonAssessment };

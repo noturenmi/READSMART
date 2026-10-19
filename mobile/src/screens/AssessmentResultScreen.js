@@ -37,6 +37,13 @@ export function AssessmentResultScreen({ navigation, route }) {
           ))}
         </Card>
       ) : null}
+      {result.attemptId ? (
+        <AssessmentButton
+          title="Review Incorrect Answers"
+          variant="secondary"
+          onPress={() => navigation.navigate('AssessmentReview', { lessonId, lessonTitle, attemptId: result.attemptId })}
+        />
+      ) : null}
       <AssessmentButton title="Back to Lesson" onPress={() => navigation.navigate('Lesson', { lessonId })} />
       <AssessmentButton title="Try Again" variant="secondary" onPress={() => navigation.replace('Assessment', { lessonId, lessonTitle })} />
     </Screen>
