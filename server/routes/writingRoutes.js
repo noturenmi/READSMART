@@ -6,6 +6,8 @@ const controller = require('../controllers/writingController');
 function createWritingRoutes(config) {
   const router = express.Router();
   router.use(createAuthenticate(config), authorizeRole('student'));
+  router.get('/submissions', controller.getHistory);
+  router.get('/submissions/:submissionId', controller.getHistoryEntry);
   router.get('/activities', controller.listActivities);
   return router;
 }

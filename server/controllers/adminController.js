@@ -121,6 +121,28 @@ const getUserProgress = asyncHandler(async (req, res) => {
   return sendSuccess(res, 200, await adminService.getStudentProgress(req.params.userId));
 });
 
+const getUserWritingSubmissionHistory = asyncHandler(async (req, res) => {
+  validateId(req.params.userId, 'user');
+  const page = Number(req.query.page || 1);
+  const limit = Number(req.query.limit || 20);
+  if (!Number.isInteger(page) || page < 1 || !Number.isInteger(limit) || limit < 1 || limit > 50) {
+    throw new AppError('Use a page of 1 or more and a limit from 1 to 50.', 400, 'INVALID_PAGINATION');
+  }
+  return sendSuccess(res, 200, await adminService.getStudentWritingSubmissionHistory(
+    req.params.userId,
+    { page, limit },
+  ));
+});
+
+const getUserWritingSubmission = asyncHandler(async (req, res) => {
+  validateId(req.params.userId, 'user');
+  validateId(req.params.submissionId, 'writing submission');
+  return sendSuccess(res, 200, await adminService.getStudentWritingSubmission(
+    req.params.userId,
+    req.params.submissionId,
+  ));
+});
+
 const listSubjects = asyncHandler(async (_req, res) => sendSuccess(res, 200, { subjects: await adminService.listSubjects() }));
 const createSubject = asyncHandler(async (req, res) => sendSuccess(res, 201, { subject: await adminService.createSubject(req.validatedBody) }));
 const updateSubject = asyncHandler(async (req, res) => {
@@ -191,6 +213,8 @@ module.exports = {
   dashboard,
   getUser,
   getUserProgress,
+  getUserWritingSubmission,
+  getUserWritingSubmissionHistory,
   getWritingActivity,
   listLessons,
   listQuestions,

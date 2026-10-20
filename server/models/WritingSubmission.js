@@ -34,6 +34,7 @@ const writingSubmissionSchema = new mongoose.Schema(
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     lesson: { type: mongoose.Schema.Types.ObjectId, ref: 'Lesson', required: true },
     writingActivity: { type: mongoose.Schema.Types.ObjectId, ref: 'WritingActivity', required: true },
+    requestKey: { type: String, trim: true, maxlength: 100, select: false },
     response: { type: String, required: true, trim: true, minlength: 1, maxlength: 15000 },
     wordCount: { type: Number, required: true, min: 1, validate: Number.isInteger },
     rubricScores: { type: rubricScoresSchema, required: true },
@@ -68,5 +69,10 @@ writingSubmissionSchema.pre('validate', function validateCalculatedResult() {
 
 writingSubmissionSchema.index({ user: 1, lesson: 1, submittedAt: -1 });
 writingSubmissionSchema.index({ user: 1, writingActivity: 1, submittedAt: -1 });
+writingSubmissionSchema.index(
+  { user: 1, requestKey: 1 },
+  { unique: true, partialFilterExpression: { requestKey: { $type: 'string' } } },
+);
+writingSubmissionSchema.index({ user: 1, submittedAt: -1, _id: -1 });
 
 module.exports = mongoose.model('WritingSubmission', writingSubmissionSchema);

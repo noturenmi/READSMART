@@ -305,3 +305,125 @@ test('backend counts and scores a valid response deterministically, then saves p
 test('word counter follows the documented Unicode and hyphenated-word rule', () => {
   assert.equal(writingService.countWords('Earth-life systems include 3 connected spheres and a learner’s example.'), 10);
 });
+
+test('writing history is private, paginated, newest-first, and opens the stored response and result', async () => {
+  const historyStudent = await User.create({
+    name: 'History Student',
+    email: 'writing-history@example.com',
+    passwordHash: 'not-used-by-this-test',
+    role: 'student',
+  });
+  const otherStudent = await User.create({
+    name: 'Other History Student',
+    email: 'other-writing-history@example.com',
+    passwordHash: 'not-used-by-this-test',
+    role: 'student',
+  });
+  const historyToken = createToken(historyStudent);
+  const otherToken = createToken(otherStudent);
+  const milLesson = await getMilLesson(2);
+  const ucspLesson = await Lesson.findOne({ subject: (await Subject.findOne({ code: 'UCSP' }))._id, lessonNumber: 2 });
+  const milActivity = await WritingActivity.findOne({ lesson: milLesson._id, isPublished: true });
+  const ucspActivity = await WritingActivity.findOne({ lesson: ucspLesson._id, isPublished: true });
+  const validResponse = (activity) => Array(activity.minimumWords).fill('reflection').join(' ') + '.';
+  const postSubmission = (lesson, activity, response) => request(app)
+    .post(`/api/lessons/${lesson._id}/writing`)
+    .set({ Authorization: `Bearer ${historyToken}` })
+    .send({ writingActivityId: String(activity._id), response });
+
+  assert.equal((await request(app).get('/api/writing/submissions')).status, 401);
+  const first = await postSubmission(milLesson, milActivity, validResponse(milActivity));
+  const second = await postSubmission(ucspLesson, ucspActivity, validResponse(ucspActivity));
+  const third = await postSubmission(milLesson, milActivity, validResponse(milActivity));
+  assert.equal(first.status, 201);
+  assert.equal(second.status, 201);
+  assert.equal(third.status, 201);
+  assert.notEqual(first.body.data.submissionId, third.body.data.submissionId);
+
+  const firstSubmittedAt = new Date(Date.now() - 10000);
+  const thirdSubmittedAt = new Date(Date.now() - 5000);
+  await WritingSubmission.updateOne({ _id: first.body.data.submissionId }, { $set: { submittedAt: firstSubmittedAt } });
+  await WritingSubmission.updateOne({ _id: second.body.data.submissionId }, {
+    $unset: { submittedAt: 1, totalScore: 1, maxScore: 1, percentage: 1, feedback: 1, rubricScores: 1, criterionFeedback: 1 },
+  });
+  await WritingSubmission.updateOne({ _id: third.body.data.submissionId }, { $set: { submittedAt: thirdSubmittedAt } });
+
+  const pageOne = await request(app).get('/api/writing/submissions?page=1&limit=2')
+    .set({ Authorization: `Bearer ${historyToken}` });
+  assert.equal(pageOne.status, 200);
+  assert.equal(pageOne.body.data.pagination.total, 3);
+  assert.equal(pageOne.body.data.submissions.length, 2);
+  assert.deepEqual(pageOne.body.data.submissions.map(({ id }) => id), [
+    second.body.data.submissionId,
+    third.body.data.submissionId,
+  ]);
+  assert.equal(pageOne.body.data.submissions[0].resultStatus, 'result_unavailable');
+  assert.equal(pageOne.body.data.submissions[0].score, null);
+  assert.ok(pageOne.body.data.submissions[0].submittedAt, 'createdAt is used if submittedAt is missing');
+  assert.equal(pageOne.body.data.submissions[1].writingActivity.id, String(milActivity._id));
+  assert.equal(pageOne.body.data.submissions[1].lesson.subject.code, 'MIL');
+
+  const pageTwo = await request(app).get('/api/writing/submissions?page=2&limit=2')
+    .set({ Authorization: `Bearer ${historyToken}` });
+  assert.equal(pageTwo.body.data.submissions.length, 1);
+  assert.equal(pageTwo.body.data.submissions[0].id, first.body.data.submissionId);
+  const emptyOtherHistory = await request(app).get('/api/writing/submissions')
+    .set({ Authorization: `Bearer ${otherToken}` });
+  assert.equal(emptyOtherHistory.status, 200);
+  assert.equal(emptyOtherHistory.body.data.submissions.length, 0);
+
+  const detail = await request(app).get(`/api/writing/submissions/${third.body.data.submissionId}`)
+    .set({ Authorization: `Bearer ${historyToken}` });
+  assert.equal(detail.status, 200);
+  assert.equal(detail.body.data.submission.response, third.body.data.response);
+  assert.equal(detail.body.data.submission.writingActivity.title, milActivity.title);
+  assert.deepEqual(detail.body.data.submission.rubricScores, third.body.data.rubricScores);
+  assert.equal(detail.body.data.submission.feedback, third.body.data.feedback);
+  const foreignDetail = await request(app).get(`/api/writing/submissions/${third.body.data.submissionId}`)
+    .set({ Authorization: `Bearer ${otherToken}` });
+  assert.equal(foreignDetail.status, 404);
+  assert.equal((await request(app).get('/api/writing/submissions/not-an-id').set({ Authorization: `Bearer ${historyToken}` })).status, 400);
+});
+
+test('writing request keys make application retries idempotent without removing intentional new attempts', async () => {
+  const student = await User.create({
+    name: 'Retry Student',
+    email: 'writing-retry@example.com',
+    passwordHash: 'not-used-by-this-test',
+    role: 'student',
+  });
+  const token = createToken(student);
+  const lesson = await getMilLesson(3);
+  const activity = await WritingActivity.findOne({ lesson: lesson._id, isPublished: true });
+  const responseText = validWritingResponse(activity);
+  const requestKey = 'writing-submit-retry-key-0001';
+  const submit = (response, key = requestKey) => request(app)
+    .post(`/api/lessons/${lesson._id}/writing`)
+    .set({ Authorization: `Bearer ${token}` })
+    .send({ writingActivityId: String(activity._id), response, requestKey: key });
+
+  const original = await submit(responseText);
+  const retry = await submit(responseText);
+  assert.equal(original.status, 201);
+  assert.equal(retry.status, 201);
+  assert.equal(retry.body.data.submissionId, original.body.data.submissionId);
+  assert.equal(await WritingSubmission.countDocuments({ user: student._id, requestKey }), 1);
+  const conflictingReuse = await submit(`${responseText} A changed response.`);
+  assert.equal(conflictingReuse.status, 409);
+  assert.equal(await WritingSubmission.countDocuments({ user: student._id }), 1);
+
+  const concurrentKey = 'writing-submit-concurrent-key-0001';
+  const [concurrentFirst, concurrentRetry] = await Promise.all([
+    submit(responseText, concurrentKey),
+    submit(responseText, concurrentKey),
+  ]);
+  assert.equal(concurrentFirst.status, 201);
+  assert.equal(concurrentRetry.status, 201);
+  assert.equal(concurrentRetry.body.data.submissionId, concurrentFirst.body.data.submissionId);
+  assert.equal(await WritingSubmission.countDocuments({ user: student._id, requestKey: concurrentKey }), 1);
+  assert.equal(await WritingSubmission.countDocuments({ user: student._id }), 2);
+});
+
+function validWritingResponse(activity) {
+  return Array(activity.minimumWords).fill('reflection').join(' ') + '.';
+}

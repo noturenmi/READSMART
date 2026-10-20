@@ -4,6 +4,7 @@ import { ReadingScreen } from '../screens/ReadingScreen';
 import { ReadingLessonsScreen } from '../screens/ReadingLessonsScreen';
 import { WritingActivityScreen } from '../screens/WritingActivityScreen';
 import { WritingResultScreen } from '../screens/WritingResultScreen';
+import { WritingHistoryScreen, WritingSubmissionDetailScreen } from '../screens/WritingHistoryScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -14,6 +15,8 @@ export function WritingNavigator() {
       <Stack.Screen name="Lessons" component={ReadingLessonsScreen} />
       <Stack.Screen name="WritingActivity" component={WritingActivityScreen} />
       <Stack.Screen name="WritingResult" component={WritingResultScreen} />
+      <Stack.Screen name="WritingHistory" component={WritingHistoryScreen} />
+      <Stack.Screen name="WritingSubmissionDetail" component={WritingSubmissionDetailScreen} />
     </Stack.Navigator>
   );
 }

@@ -4,7 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '../components/Screen';
 import { ReadingState } from '../components/ReadingComponents';
-import { AdminCard, AdminHeader, AdminSectionTitle } from '../components/AdminComponents';
+import { AdminButton, AdminCard, AdminHeader, AdminSectionTitle } from '../components/AdminComponents';
 import { api } from '../services/api';
 import { colors } from '../theme';
 
@@ -49,6 +49,15 @@ export function AdminStudentProgressScreen({ navigation, route }) {
             <Metric title="Overall progress" value={`${progress.overallProgressPercentage}%`} />
             <Metric title="Last activity" value={formatDate(progress.lastActivityAt)} />
           </AdminCard>
+          <AdminButton
+            title="View writing submissions"
+            icon="document-text-outline"
+            secondary
+            onPress={() => navigation.navigate('AdminWritingHistory', {
+              adminUserId: userId,
+              userName: data.student?.name,
+            })}
+          />
           <Text style={styles.heading}>Subject progress</Text>
           {(data.subjects || []).map((subject) => (
             <AdminCard key={subject.subjectId} style={styles.subject}>

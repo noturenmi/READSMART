@@ -142,12 +142,18 @@ export const api = {
   getLessonWritingActivity(lessonId) {
     return request(`/lessons/${encodeURIComponent(lessonId)}/writing`, { authenticated: true });
   },
-  submitLessonWriting(lessonId, writingActivityId, response) {
+  submitLessonWriting(lessonId, writingActivityId, response, requestKey) {
     return request(`/lessons/${encodeURIComponent(lessonId)}/writing`, {
       method: 'POST',
-      body: { writingActivityId, response },
+      body: { writingActivityId, response, ...(requestKey ? { requestKey } : {}) },
       authenticated: true,
     });
+  },
+  getMyWritingSubmissionHistory(page = 1, limit = 20) {
+    return request(`/writing/submissions?page=${page}&limit=${limit}`, { authenticated: true });
+  },
+  getMyWritingSubmission(submissionId) {
+    return request(`/writing/submissions/${encodeURIComponent(submissionId)}`, { authenticated: true });
   },
   getLessonWritingSubmissions(lessonId) {
     return request(`/lessons/${encodeURIComponent(lessonId)}/writing-submissions`, { authenticated: true });
@@ -182,6 +188,12 @@ export const api = {
   },
   adminGetUserProgress(userId) {
     return request(`/admin/users/${encodeURIComponent(userId)}/progress`, { authenticated: true });
+  },
+  adminGetWritingSubmissionHistory(userId, page = 1, limit = 20) {
+    return request(`/admin/users/${encodeURIComponent(userId)}/writing-submissions?page=${page}&limit=${limit}`, { authenticated: true });
+  },
+  adminGetWritingSubmission(userId, submissionId) {
+    return request(`/admin/users/${encodeURIComponent(userId)}/writing-submissions/${encodeURIComponent(submissionId)}`, { authenticated: true });
   },
   adminGetSubjects() {
     return request('/admin/subjects', { authenticated: true });

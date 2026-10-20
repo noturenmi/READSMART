@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Lesson = require('../models/Lesson');
 const WritingActivity = require('../models/WritingActivity');
 const WritingSubmission = require('../models/WritingSubmission');
@@ -127,6 +128,76 @@ function serializeActivity(activity, lesson) {
   };
 }
 
+function serializeSubmissionResult(submission, lesson, activity) {
+  return {
+    submissionId: String(submission._id),
+    lesson: { id: String(lesson._id), title: lesson.title },
+    writingActivity: { id: String(activity._id), title: activity.title },
+    response: submission.response,
+    wordCount: submission.wordCount,
+    rubricScores: submission.rubricScores,
+    criterionFeedback: submission.criterionFeedback,
+    ratingLabels,
+    totalScore: submission.totalScore,
+    maxScore: submission.maxScore,
+    percentage: submission.percentage,
+    feedback: submission.feedback,
+    submittedAt: submission.submittedAt,
+  };
+}
+
+function submissionDate(submission) {
+  const value = submission.submittedAt || submission.createdAt;
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? date : null;
+}
+
+function serializeHistoryEntry(submission, { includeResponse = false } = {}) {
+  const lesson = submission.lesson && typeof submission.lesson === 'object' ? submission.lesson : null;
+  const subject = lesson?.subject && typeof lesson.subject === 'object' ? lesson.subject : null;
+  const activity = submission.writingActivity && typeof submission.writingActivity === 'object'
+    ? submission.writingActivity
+    : null;
+  const hasScore = Number.isFinite(submission.totalScore) && Number.isFinite(submission.maxScore);
+  const hasPercentage = Number.isFinite(submission.percentage);
+  const feedback = typeof submission.feedback === 'string' && submission.feedback.trim()
+    ? submission.feedback.trim()
+    : null;
+  const response = typeof submission.response === 'string' ? submission.response : '';
+  const normalizedPreview = response.replace(/\s+/g, ' ').trim();
+
+  return {
+    id: String(submission._id),
+    writingActivity: activity ? {
+      id: String(activity._id),
+      title: activity.title || 'Writing activity details unavailable',
+      prompt: activity.prompt || null,
+    } : null,
+    lesson: lesson ? {
+      id: String(lesson._id),
+      title: lesson.title || 'Lesson details unavailable',
+      lessonNumber: Number.isInteger(lesson.lessonNumber) ? lesson.lessonNumber : null,
+      subject: subject ? { name: subject.name || '', code: subject.code || '' } : null,
+    } : null,
+    submittedAt: submission.historyDate || submissionDate(submission),
+    wordCount: Number.isInteger(submission.wordCount) ? submission.wordCount : null,
+    responsePreview: normalizedPreview.length > 220 ? `${normalizedPreview.slice(0, 220).trimEnd()}…` : normalizedPreview,
+    response: includeResponse ? response : undefined,
+    resultStatus: hasScore ? 'assessed' : 'result_unavailable',
+    score: hasScore ? {
+      totalScore: submission.totalScore,
+      maxScore: submission.maxScore,
+      percentage: hasPercentage ? submission.percentage : null,
+    } : null,
+    rubricScores: submission.rubricScores || null,
+    criterionFeedback: submission.criterionFeedback || null,
+    feedback,
+    aiFeedback: includeResponse ? (submission.aiFeedback || null) : undefined,
+    aiFeedbackGeneratedAt: includeResponse ? (submission.aiFeedbackGeneratedAt || null) : undefined,
+  };
+}
+
 async function findPublishedLesson(lessonId) {
   const lesson = await Lesson.findOne({ _id: lessonId, ...publishedLessonFilter })
     .populate({ path: 'subject', select: 'name code' })
@@ -206,7 +277,7 @@ function validateResponse(response, activity) {
   return wordCount;
 }
 
-async function submitLessonWriting(userId, lessonId, writingActivityId, response) {
+async function submitLessonWriting(userId, lessonId, writingActivityId, response, requestKey) {
   const lesson = await findPublishedLesson(lessonId);
   const activity = await WritingActivity.findOne({
     _id: writingActivityId,
@@ -215,40 +286,54 @@ async function submitLessonWriting(userId, lessonId, writingActivityId, response
   }).lean();
   if (!activity) throw new AppError('This writing activity is not available for the requested lesson.', 404, 'WRITING_ACTIVITY_NOT_FOUND');
 
-  const wordCount = validateResponse(response, activity);
-  const result = evaluateRubric(response, activity);
-  const submission = await WritingSubmission.create({
-    user: userId,
-    lesson: lesson._id,
-    writingActivity: activity._id,
-    response,
-    wordCount,
-    rubricScores: result.rubricScores,
-    criterionFeedback: result.criterionFeedback,
-    totalScore: result.totalScore,
-    maxScore: result.maxScore,
-    percentage: result.percentage,
-    feedback: result.feedback,
-    submittedAt: new Date(),
-  });
+  const cleanResponse = response.trim();
+  const wordCount = validateResponse(cleanResponse, activity);
+  const result = evaluateRubric(cleanResponse, activity);
+  const existingRequest = requestKey
+    ? await WritingSubmission.findOne({ user: userId, requestKey }).lean()
+    : null;
+  if (existingRequest) {
+    return reuseSubmissionRequest(existingRequest, userId, lesson, activity, cleanResponse);
+  }
+
+  let submission;
+  try {
+    submission = await WritingSubmission.create({
+      user: userId,
+      lesson: lesson._id,
+      writingActivity: activity._id,
+      requestKey,
+      response: cleanResponse,
+      wordCount,
+      rubricScores: result.rubricScores,
+      criterionFeedback: result.criterionFeedback,
+      totalScore: result.totalScore,
+      maxScore: result.maxScore,
+      percentage: result.percentage,
+      feedback: result.feedback,
+      submittedAt: new Date(),
+    });
+  } catch (error) {
+    if (error?.code !== 11000 || !requestKey) throw error;
+    const concurrentRequest = await WritingSubmission.findOne({ user: userId, requestKey }).lean();
+    if (!concurrentRequest) throw error;
+    return reuseSubmissionRequest(concurrentRequest, userId, lesson, activity, cleanResponse);
+  }
   await progressService.awardXP(userId, 'writing_activity', lesson._id, submission._id);
   await achievementService.refreshAfterCompletedActivity(userId);
 
-  return {
-    submissionId: String(submission._id),
-    lesson: { id: String(lesson._id), title: lesson.title },
-    writingActivity: { id: String(activity._id), title: activity.title },
-    response: submission.response,
-    wordCount: submission.wordCount,
-    rubricScores: result.rubricScores,
-    criterionFeedback: result.criterionFeedback,
-    ratingLabels,
-    totalScore: result.totalScore,
-    maxScore: result.maxScore,
-    percentage: result.percentage,
-    feedback: result.feedback,
-    submittedAt: submission.submittedAt,
-  };
+  return serializeSubmissionResult(submission, lesson, activity);
+}
+
+async function reuseSubmissionRequest(submission, userId, lesson, activity, response) {
+  if (String(submission.lesson) !== String(lesson._id)
+    || String(submission.writingActivity) !== String(activity._id)
+    || submission.response !== response) {
+    throw new AppError('This submission request was already used for a different response.', 409, 'SUBMISSION_REQUEST_REUSED');
+  }
+  await progressService.awardXP(userId, 'writing_activity', lesson._id, submission._id);
+  await achievementService.refreshAfterCompletedActivity(userId);
+  return serializeSubmissionResult(submission, lesson, activity);
 }
 
 async function getLessonWritingSubmissions(userId, lessonId) {
@@ -278,11 +363,63 @@ async function getLessonWritingSubmissions(userId, lessonId) {
   };
 }
 
+function populatedSubmissionQuery(query) {
+  return query
+    .populate({ path: 'writingActivity', select: 'title prompt' })
+    .populate({
+      path: 'lesson',
+      select: 'title lessonNumber subject',
+      populate: { path: 'subject', select: 'name code' },
+    });
+}
+
+async function getWritingSubmissionHistory(userId, { page = 1, limit = 20 } = {}) {
+  const userObjectId = new mongoose.Types.ObjectId(String(userId));
+  const [rows, total] = await Promise.all([
+    WritingSubmission.aggregate([
+      { $match: { user: userObjectId } },
+      { $addFields: { historyDate: { $ifNull: ['$submittedAt', '$createdAt'] } } },
+      { $sort: { historyDate: -1, _id: -1 } },
+      { $skip: (page - 1) * limit },
+      { $limit: limit },
+      { $project: {
+        _id: 1, writingActivity: 1, lesson: 1, response: 1, wordCount: 1,
+        rubricScores: 1, criterionFeedback: 1, totalScore: 1, maxScore: 1,
+        percentage: 1, feedback: 1, submittedAt: 1, createdAt: 1, historyDate: 1,
+      } },
+    ]),
+    WritingSubmission.countDocuments({ user: userObjectId }),
+  ]);
+  const ids = rows.map(({ _id }) => _id);
+  const documents = ids.length
+    ? await populatedSubmissionQuery(WritingSubmission.find({ _id: { $in: ids }, user: userObjectId })).lean()
+    : [];
+  const byId = new Map(documents.map((submission) => [String(submission._id), submission]));
+
+  return {
+    submissions: rows.flatMap((row) => {
+      const submission = byId.get(String(row._id));
+      return submission ? [serializeHistoryEntry({ ...submission, historyDate: row.historyDate })] : [];
+    }),
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+  };
+}
+
+async function getWritingSubmissionDetail(userId, submissionId) {
+  const submission = await populatedSubmissionQuery(
+    WritingSubmission.findOne({ _id: submissionId, user: userId }),
+  ).lean();
+  if (!submission) throw new AppError('This writing submission is not available.', 404, 'WRITING_SUBMISSION_NOT_FOUND');
+  return { submission: serializeHistoryEntry(submission, { includeResponse: true }) };
+}
+
 module.exports = {
   countWords,
   evaluateRubric,
   getLessonWritingActivity,
   getLessonWritingSubmissions,
+  getWritingSubmissionDetail,
+  getWritingSubmissionHistory,
   listWritingActivities,
   submitLessonWriting,
 };

@@ -7,6 +7,7 @@ import { AdminSubjectsScreen } from '../screens/AdminSubjectsScreen';
 import { AdminLessonsScreen } from '../screens/AdminLessonsScreen';
 import { AdminQuestionsScreen } from '../screens/AdminQuestionsScreen';
 import { AdminWritingActivitiesScreen } from '../screens/AdminWritingActivitiesScreen';
+import { WritingHistoryScreen, WritingSubmissionDetailScreen } from '../screens/WritingHistoryScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -20,6 +21,8 @@ export function AdminNavigator() {
       <Stack.Screen name="AdminLessons" component={AdminLessonsScreen} />
       <Stack.Screen name="AdminQuestions" component={AdminQuestionsScreen} />
       <Stack.Screen name="AdminWritingActivities" component={AdminWritingActivitiesScreen} />
+      <Stack.Screen name="AdminWritingHistory" component={WritingHistoryScreen} />
+      <Stack.Screen name="AdminWritingSubmissionDetail" component={WritingSubmissionDetailScreen} />
     </Stack.Navigator>
   );
 }

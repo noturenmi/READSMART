@@ -12,6 +12,8 @@ function createAdminRoutes(config) {
   router.get('/users', controller.listUsers);
   router.get('/users/:userId', controller.getUser);
   router.get('/users/:userId/progress', controller.getUserProgress);
+  router.get('/users/:userId/writing-submissions', controller.getUserWritingSubmissionHistory);
+  router.get('/users/:userId/writing-submissions/:submissionId', controller.getUserWritingSubmission);
 
   router.get('/subjects', controller.listSubjects);
   router.post('/subjects', controller.createSubjectValidator, controller.createSubject);

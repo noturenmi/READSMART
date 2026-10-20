@@ -304,3 +304,45 @@ test('unpublishing existing content retains its assessment attempts and writing 
   assert.equal(await WritingSubmission.countDocuments({ user: student._id, lesson: milLesson._id }), submissionsBefore);
   assert.ok(await StudentProgress.exists({ user: student._id }));
 });
+
+test('admins can view a student writing history while students cannot use admin history routes', async () => {
+  const ucsp = await Subject.findOne({ code: 'UCSP' });
+  const lesson = await Lesson.findOne({ subject: ucsp._id, lessonNumber: 1 });
+  const activity = await WritingActivity.findOne({ lesson: lesson._id, isPublished: true });
+  const responseText = Array.from({ length: activity.minimumWords }, (_item, index) => `Reflection ${index}`).join(' ') + '.';
+  const submitted = await asStudent(request(app)
+    .post(`/api/lessons/${lesson.id}/writing`)
+    .send({ writingActivityId: String(activity._id), response: responseText }));
+  assert.equal(submitted.status, 201);
+
+  const historyPath = `/api/admin/users/${student.id}/writing-submissions`;
+  assert.equal((await request(app).get(historyPath)).status, 401);
+  assert.equal((await asStudent(request(app).get(historyPath))).status, 403);
+
+  const history = await asAdmin(request(app).get(historyPath));
+  assert.equal(history.status, 200);
+  const entry = history.body.data.submissions.find(({ id }) => id === submitted.body.data.submissionId);
+  assert.ok(entry);
+  assert.equal(entry.writingActivity.title, activity.title);
+  assert.equal(entry.lesson.subject.code, 'UCSP');
+  assert.equal(entry.responsePreview.startsWith('Reflection 0'), true);
+  assert.equal(entry.score.totalScore, submitted.body.data.totalScore);
+
+  const detailPath = `${historyPath}/${submitted.body.data.submissionId}`;
+  const detail = await asAdmin(request(app).get(detailPath));
+  assert.equal(detail.status, 200);
+  assert.equal(detail.body.data.submission.response, responseText);
+  assert.equal(detail.body.data.submission.feedback, submitted.body.data.feedback);
+
+  const unrelatedStudent = await User.create({
+    name: 'No Submissions Student',
+    email: 'no-writing-submissions@example.com',
+    passwordHash: 'test-hash',
+    role: 'student',
+  });
+  const unrelatedHistory = await asAdmin(request(app).get(`/api/admin/users/${unrelatedStudent.id}/writing-submissions`));
+  assert.equal(unrelatedHistory.status, 200);
+  assert.equal(unrelatedHistory.body.data.submissions.length, 0);
+  const adminAsStudent = await asAdmin(request(app).get(`/api/admin/users/${admin.id}/writing-submissions`));
+  assert.equal(adminAsStudent.status, 404);
+});

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TextInput, View } from 'react-native';
 import { AssessmentButton } from '../components/AssessmentComponents';
 import { Card, Screen } from '../components/Screen';
@@ -7,6 +7,10 @@ import { api } from '../services/api';
 import { colors } from '../theme';
 
 const wordPattern = /[\p{L}\p{N}]+(?:['’\-][\p{L}\p{N}]+)*/gu;
+
+function createRequestKey() {
+  return `writing-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
+}
 
 function countWords(text) {
   return (text.match(wordPattern) || []).length;
@@ -21,6 +25,8 @@ export function WritingActivityScreen({ navigation, route }) {
   const [submitError, setSubmitError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
+  const requestKey = useRef(null);
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -39,11 +45,13 @@ export function WritingActivityScreen({ navigation, route }) {
   const canSubmit = Boolean(activity && response.trim() && !belowMinimum && !aboveMaximum && !submitting);
 
   async function submitResponse() {
-    if (!canSubmit) return;
+    if (!canSubmit || submittingRef.current) return;
+    submittingRef.current = true;
+    requestKey.current ||= createRequestKey();
     setSubmitting(true);
     setSubmitError('');
     try {
-      const result = await api.submitLessonWriting(lessonId, activity.id, response);
+      const result = await api.submitLessonWriting(lessonId, activity.id, response, requestKey.current);
       navigation.replace('WritingResult', {
         lessonId,
         lessonTitle: activity.lessonTitle || lessonTitle,
@@ -52,6 +60,7 @@ export function WritingActivityScreen({ navigation, route }) {
     } catch (error) {
       setSubmitError(error.message || 'Unable to submit your response. Please try again.');
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   }
@@ -100,7 +109,11 @@ export function WritingActivityScreen({ navigation, route }) {
               accessibilityLabel="Your writing response"
               accessibilityHint="Write a response that meets the displayed word-count requirement."
               value={response}
-              onChangeText={(text) => { setResponse(text); setSubmitError(''); }}
+              onChangeText={(text) => {
+                if (text !== response) requestKey.current = null;
+                setResponse(text);
+                setSubmitError('');
+              }}
               editable={!submitting}
               multiline
               maxLength={15000}

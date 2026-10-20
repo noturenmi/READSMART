@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Screen } from '../components/Screen';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Card, Screen } from '../components/Screen';
 import { ReadingHeader, ReadingState, SubjectCard } from '../components/ReadingComponents';
 import { api } from '../services/api';
+import { colors } from '../theme';
 import { getLearningFlow } from '../utils/learningFlow';
 
 export function ReadingScreen({ navigation, route }) {
@@ -29,6 +32,22 @@ export function ReadingScreen({ navigation, route }) {
         subtitle={flow.librarySubtitle}
         eyebrow={flow.libraryEyebrow}
       />
+      {flow.key === 'writing' ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => navigation.navigate('WritingHistory')}
+          style={({ pressed }) => pressed && styles.pressed}
+        >
+          <Card style={styles.historyCard}>
+            <View style={styles.historyIcon}><Ionicons name="time-outline" size={20} color={colors.greenDark} /></View>
+            <View style={styles.historyCopy}>
+              <Text style={styles.historyTitle}>My Writing Submissions</Text>
+              <Text style={styles.historySubtitle}>Review your previous responses and feedback</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+          </Card>
+        </Pressable>
+      ) : null}
       {loading ? <ReadingState kind="loading" title="Loading subjects..." /> : null}
       {!loading && failed ? (
         <ReadingState kind="error" title="Unable to load subjects." message="Please check your connection and try again." onRetry={() => setAttempt((value) => value + 1)} />
@@ -55,3 +74,12 @@ export function ReadingScreen({ navigation, route }) {
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  historyCard: { flexDirection: 'row', alignItems: 'center', gap: 11, padding: 13 },
+  historyIcon: { width: 39, height: 39, borderRadius: 13, backgroundColor: colors.greenLight, alignItems: 'center', justifyContent: 'center' },
+  historyCopy: { flex: 1, minWidth: 0 },
+  historyTitle: { color: colors.greenDark, fontSize: 13, lineHeight: 18, fontWeight: '800' },
+  historySubtitle: { color: colors.muted, fontSize: 11, lineHeight: 16, marginTop: 2 },
+  pressed: { opacity: 0.78 },
+});

@@ -7,6 +7,7 @@ const WritingActivity = require('../models/WritingActivity');
 const progressService = require('./progressService');
 const recommendationService = require('./recommendationService');
 const achievementService = require('./achievementService');
+const writingService = require('./writingService');
 const { rubricCriteria } = require('../utils/writingRubric');
 const { AppError } = require('../utils/AppError');
 
@@ -168,6 +169,16 @@ async function getStudentProgress(userId) {
   return { student, progress, subjects, recommendations, recommendationsEmptyReason: emptyReason, achievements };
 }
 
+async function getStudentWritingSubmissionHistory(userId, pagination) {
+  await getStudent(userId);
+  return writingService.getWritingSubmissionHistory(userId, pagination);
+}
+
+async function getStudentWritingSubmission(userId, submissionId) {
+  await getStudent(userId);
+  return writingService.getWritingSubmissionDetail(userId, submissionId);
+}
+
 async function listSubjects() {
   const [subjects, lessonCounts] = await Promise.all([
     Subject.find({}).sort({ order: 1, name: 1 }).lean(),
@@ -327,6 +338,8 @@ module.exports = {
   getDashboard,
   getStudent,
   getStudentProgress,
+  getStudentWritingSubmission,
+  getStudentWritingSubmissionHistory,
   getWritingActivity,
   listLessons,
   listQuestions,
