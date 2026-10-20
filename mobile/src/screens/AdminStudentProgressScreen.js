@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '../components/Screen';
 import { ReadingState } from '../components/ReadingComponents';
 import { AdminCard, AdminHeader, AdminSectionTitle } from '../components/AdminComponents';
@@ -65,6 +66,36 @@ export function AdminStudentProgressScreen({ navigation, route }) {
               <Text style={styles.subjectXP}>{subject.totalXP} XP earned in this subject</Text>
             </AdminCard>
           ))}
+          <AdminSectionTitle hint="Achievement eligibility is calculated from this student's saved assessment and writing records.">
+            Achievement badges
+          </AdminSectionTitle>
+          {(data.achievements?.badges || []).length ? data.achievements.badges.map((badge) => (
+            <AdminCard
+              key={badge.id}
+              style={[styles.achievement, badge.earned ? styles.achievementEarned : styles.achievementLocked]}
+            >
+              <View style={styles.achievementRow}>
+                <View style={[styles.achievementIcon, badge.earned ? styles.achievementIconEarned : styles.achievementIconLocked]}>
+                  <Ionicons name={badge.icon || 'ribbon-outline'} size={18} color={badge.earned ? colors.greenDark : colors.muted} />
+                </View>
+                <View style={styles.subjectCopy}>
+                  <Text style={styles.subjectName}>{badge.name} · {badge.earned ? 'Earned' : 'Locked'}</Text>
+                  <Text style={styles.caption}>{badge.description}</Text>
+                </View>
+              </View>
+              <Text style={styles.caption}>{badge.earned ? `Earned ${formatDate(badge.earnedAt)}` : badge.requirement}</Text>
+              {!badge.earned ? (
+                <>
+                  <ProgressBar percentage={badge.progress?.percentage || 0} />
+                  <Text style={styles.caption}>{badge.progress?.label || 'No eligible activity yet'}</Text>
+                </>
+              ) : null}
+            </AdminCard>
+          )) : (
+            <AdminCard style={styles.achievement}>
+              <Text style={styles.caption}>Achievement records are not available yet.</Text>
+            </AdminCard>
+          )}
           <AdminSectionTitle hint="Recommendations are based on this student's latest published-lesson assessments.">
             Recommended lessons to review
           </AdminSectionTitle>
@@ -127,5 +158,12 @@ const styles = StyleSheet.create({
   subjectName: { color: colors.ink, fontSize: 13, lineHeight: 18, fontWeight: '700' },
   percent: { color: colors.greenDark, fontSize: 12, fontWeight: '800' },
   subjectXP: { color: colors.greenDark, fontSize: 11, lineHeight: 16, fontWeight: '700' },
+  achievement: { gap: 9, padding: 13 },
+  achievementEarned: { backgroundColor: colors.greenLight, borderColor: '#D8E8DC' },
+  achievementLocked: { opacity: 0.82 },
+  achievementRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 9 },
+  achievementIcon: { width: 34, height: 34, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  achievementIconEarned: { backgroundColor: '#D5E8D9' },
+  achievementIconLocked: { backgroundColor: '#EEF0EC' },
   recommendation: { gap: 6, padding: 14 },
 });

@@ -10,6 +10,9 @@ import { colors } from '../theme';
 export function ProgressScreen() {
   const [progress, setProgress] = useState(null);
   const [subjects, setSubjects] = useState([]);
+  const [badges, setBadges] = useState([]);
+  const [badgesLoading, setBadgesLoading] = useState(true);
+  const [badgesError, setBadgesError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [reload, setReload] = useState(0);
@@ -18,6 +21,8 @@ export function ProgressScreen() {
     let active = true;
     setLoading(true);
     setError('');
+    setBadgesLoading(true);
+    setBadgesError(false);
     Promise.all([api.getMyProgress(), api.getSubjectProgress()])
       .then(([myProgress, subjectData]) => {
         if (!active) return;
@@ -28,6 +33,10 @@ export function ProgressScreen() {
         if (active) setError(requestError.message || 'Unable to load your progress. Please try again.');
       })
       .finally(() => { if (active) setLoading(false); });
+    api.getMyAchievements()
+      .then((result) => { if (active) setBadges(Array.isArray(result.badges) ? result.badges : []); })
+      .catch(() => { if (active) setBadgesError(true); })
+      .finally(() => { if (active) setBadgesLoading(false); });
     return () => { active = false; };
   }, [reload]));
 
@@ -131,6 +140,56 @@ export function ProgressScreen() {
               <Text style={styles.emptyText}>Complete a reading assessment or writing activity to earn XP.</Text>
             </Card>
           )}
+
+          <View style={styles.sectionHeading}>
+            <Text style={styles.sectionTitle}>My Achievements</Text>
+            <Text style={styles.sectionHint}>Badges are earned through completed assessments and writing activities.</Text>
+          </View>
+          {badgesLoading ? <ReadingState kind="loading" title="Loading achievements…" /> : null}
+          {!badgesLoading && badgesError ? (
+            <ReadingState
+              kind="error"
+              title="Unable to load achievements."
+              message="Your progress is still available. Please try again."
+              onRetry={() => setReload((value) => value + 1)}
+            />
+          ) : null}
+          {!badgesLoading && !badgesError && badges.length ? badges.map((badge) => (
+            <Card
+              key={badge.id}
+              style={[styles.achievementCard, badge.earned ? styles.earnedBadge : styles.lockedBadge]}
+            >
+              <View style={styles.achievementTop}>
+                <View style={[styles.achievementIcon, badge.earned ? styles.earnedIcon : styles.lockedIcon]}>
+                  <Ionicons name={badge.icon || 'ribbon-outline'} size={20} color={badge.earned ? colors.greenDark : colors.muted} />
+                </View>
+                <View style={styles.achievementCopy}>
+                  <View style={styles.achievementTitleRow}>
+                    <Text style={styles.achievementName}>{badge.name}</Text>
+                    <Text style={[styles.badgeStatus, badge.earned ? styles.earnedStatus : styles.lockedStatus]}>
+                      {badge.earned ? 'EARNED' : 'LOCKED'}
+                    </Text>
+                  </View>
+                  <Text style={styles.achievementDescription}>{badge.description}</Text>
+                </View>
+              </View>
+              {badge.earned ? (
+                <Text style={styles.achievementProgress}>Earned {formatDate(badge.earnedAt)}</Text>
+              ) : (
+                <>
+                  <Text style={styles.achievementProgress}>{badge.progress?.label || badge.requirement}</Text>
+                  <ProgressBar percentage={badge.progress?.percentage || 0} label={`${badge.name} achievement progress`} />
+                  <Text style={styles.achievementRequirement}>{badge.requirement}</Text>
+                </>
+              )}
+            </Card>
+          )) : null}
+          {!badgesLoading && !badgesError && !badges.length ? (
+            <Card style={styles.emptyCard}>
+              <Text style={styles.emptyTitle}>Achievements are not available yet.</Text>
+              <Text style={styles.emptyText}>Try again after your learning records are ready.</Text>
+            </Card>
+          ) : null}
         </>
       ) : null}
     </Screen>
@@ -204,6 +263,22 @@ const styles = StyleSheet.create({
   activityTitle: { color: colors.ink, fontSize: 12, lineHeight: 17, fontWeight: '700' },
   activityLesson: { color: colors.muted, fontSize: 11, lineHeight: 16, marginTop: 2 },
   activityXP: { color: colors.greenDark, fontSize: 12, fontWeight: '800' },
+  achievementCard: { gap: 10, padding: 14 },
+  earnedBadge: { backgroundColor: colors.greenLight, borderColor: '#D8E8DC' },
+  lockedBadge: { backgroundColor: colors.surface, opacity: 0.82 },
+  achievementTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  achievementIcon: { width: 40, height: 40, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  earnedIcon: { backgroundColor: '#D5E8D9' },
+  lockedIcon: { backgroundColor: '#EEF0EC' },
+  achievementCopy: { flex: 1, minWidth: 0, gap: 4 },
+  achievementTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 7 },
+  achievementName: { flex: 1, color: colors.ink, fontSize: 14, lineHeight: 19, fontWeight: '800' },
+  badgeStatus: { fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
+  earnedStatus: { color: colors.green },
+  lockedStatus: { color: colors.muted },
+  achievementDescription: { color: colors.muted, fontSize: 12, lineHeight: 18 },
+  achievementProgress: { color: colors.greenDark, fontSize: 11, lineHeight: 16, fontWeight: '700' },
+  achievementRequirement: { color: colors.muted, fontSize: 10, lineHeight: 15 },
   emptyCard: { alignItems: 'center', gap: 8, paddingVertical: 20 },
   emptyTitle: { color: colors.ink, fontWeight: '700', fontSize: 14, textAlign: 'center' },
   emptyText: { color: colors.muted, textAlign: 'center', fontSize: 12, lineHeight: 18 },

@@ -2,6 +2,7 @@ const AssessmentAttempt = require('../models/AssessmentAttempt');
 const Lesson = require('../models/Lesson');
 const ReadingQuestion = require('../models/ReadingQuestion');
 const progressService = require('./progressService');
+const achievementService = require('./achievementService');
 const { AppError } = require('../utils/AppError');
 
 const publishedLessonFilter = { isPublished: true, contentStatus: 'ready' };
@@ -116,6 +117,7 @@ async function submitLessonAssessment(userId, lessonId, submittedAnswers) {
     submittedAt: new Date(),
   });
   await progressService.awardXP(userId, 'reading_assessment', lesson._id, attempt._id);
+  await achievementService.refreshAfterCompletedActivity(userId);
 
   return {
     attemptId: String(attempt._id),

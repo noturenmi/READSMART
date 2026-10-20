@@ -1,5 +1,6 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { CommonActions } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { HomeScreen } from '../screens/HomeScreen';
 import { ReadingNavigator } from './ReadingNavigator';
@@ -39,7 +40,23 @@ export function StudentTabs() {
       })}
     >
       <Tabs.Screen name="Home" component={HomeScreen} />
-      <Tabs.Screen name="Reading" component={ReadingNavigator} />
+      <Tabs.Screen
+        name="Reading"
+        component={ReadingNavigator}
+        options={{ popToTopOnBlur: true }}
+        listeners={({ navigation }) => ({
+          tabPress: () => {
+            const readingRoute = navigation.getState().routes.find((route) => route.name === 'Reading');
+            const readingStackKey = readingRoute?.state?.key;
+            if (readingStackKey) {
+              navigation.dispatch({
+                ...CommonActions.reset({ index: 0, routes: [{ name: 'Subjects' }] }),
+                target: readingStackKey,
+              });
+            }
+          },
+        })}
+      />
       <Tabs.Screen name="Writing" component={WritingNavigator} />
       <Tabs.Screen name="Progress" component={ProgressScreen} />
       <Tabs.Screen name="Profile" component={ProfileScreen} />

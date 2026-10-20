@@ -6,6 +6,7 @@ const User = require('../models/User');
 const WritingActivity = require('../models/WritingActivity');
 const progressService = require('./progressService');
 const recommendationService = require('./recommendationService');
+const achievementService = require('./achievementService');
 const { rubricCriteria } = require('../utils/writingRubric');
 const { AppError } = require('../utils/AppError');
 
@@ -163,7 +164,8 @@ async function getStudentProgress(userId) {
   const progress = await progressService.getStudentProgress(userId);
   const subjects = await progressService.getSubjectProgress(userId);
   const { recommendations, emptyReason } = await recommendationService.getRecommendedLessons(userId, subjects);
-  return { student, progress, subjects, recommendations, recommendationsEmptyReason: emptyReason };
+  const achievements = await achievementService.getStudentAchievements(userId);
+  return { student, progress, subjects, recommendations, recommendationsEmptyReason: emptyReason, achievements };
 }
 
 async function listSubjects() {

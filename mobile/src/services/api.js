@@ -168,6 +168,9 @@ export const api = {
   getRecommendedLessons() {
     return request('/progress/recommendations', { authenticated: true });
   },
+  getMyAchievements() {
+    return request('/progress/achievements', { authenticated: true });
+  },
   adminGetDashboard() {
     return request('/admin/dashboard', { authenticated: true });
   },

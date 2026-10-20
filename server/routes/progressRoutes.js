@@ -10,6 +10,7 @@ function createProgressRoutes(config) {
   router.get('/me', controller.getMyProgress);
   router.get('/subjects', controller.getSubjectsProgress);
   router.get('/recommendations', controller.getRecommendations);
+  router.get('/achievements', controller.getAchievements);
   return router;
 }
 

@@ -13,7 +13,7 @@ const Stack = createNativeStackNavigator();
 
 export function ReadingNavigator() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator initialRouteName="Subjects" screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Subjects" component={ReadingScreen} />
       <Stack.Screen name="Lessons" component={ReadingLessonsScreen} />
       <Stack.Screen name="Lesson" component={LessonDetailScreen} />

@@ -2,6 +2,7 @@ const Lesson = require('../models/Lesson');
 const WritingActivity = require('../models/WritingActivity');
 const WritingSubmission = require('../models/WritingSubmission');
 const progressService = require('./progressService');
+const achievementService = require('./achievementService');
 const { AppError } = require('../utils/AppError');
 const { criterionFeedback, overallFeedbackFor, ratingLabels, rubricCriteria } = require('../utils/writingRubric');
 
@@ -231,6 +232,7 @@ async function submitLessonWriting(userId, lessonId, writingActivityId, response
     submittedAt: new Date(),
   });
   await progressService.awardXP(userId, 'writing_activity', lesson._id, submission._id);
+  await achievementService.refreshAfterCompletedActivity(userId);
 
   return {
     submissionId: String(submission._id),
