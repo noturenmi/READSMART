@@ -177,6 +177,9 @@ export const api = {
   getMyAchievements() {
     return request('/progress/achievements', { authenticated: true });
   },
+  getLearningReport() {
+    return request('/progress/report', { authenticated: true });
+  },
   adminGetDashboard() {
     return request('/admin/dashboard', { authenticated: true });
   },

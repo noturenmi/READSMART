@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '../components/Screen';
 import { ReadingState } from '../components/ReadingComponents';
 import { AdminButton, AdminCard, AdminHeader, AdminSectionTitle } from '../components/AdminComponents';
+import { LearningReportSection } from '../components/LearningReportSection';
 import { api } from '../services/api';
 import { colors } from '../theme';
 
@@ -125,6 +126,16 @@ export function AdminStudentProgressScreen({ navigation, route }) {
               </Text>
             </AdminCard>
           )}
+          <LearningReportSection
+            report={data.learningReport}
+            admin
+            onRetry={() => setReload((n) => n + 1)}
+            onOpenWritingSubmission={(submissionId) => navigation.navigate('AdminWritingSubmissionDetail', {
+              adminUserId: userId,
+              userName: data.student?.name,
+              submissionId,
+            })}
+          />
         </>
       ) : null}
     </Screen>

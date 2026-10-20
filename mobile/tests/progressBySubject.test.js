@@ -8,7 +8,8 @@ const read = (relativePath) => fs.readFileSync(path.join(__dirname, '..', relati
 test('student progress screen renders live subject completion, activity counts, XP, and percentage', () => {
   const screen = read('src/screens/ProgressScreen.js');
 
-  assert.match(screen, /api\.getSubjectProgress\(\)/);
+  assert.match(screen, /api\.getLearningReport\(\)/);
+  assert.match(screen, /result\.subjects/);
   assert.match(screen, /Progress by Subject/);
   assert.match(screen, /subject\.subjectName/);
   assert.match(screen, /subject\.percentage/);

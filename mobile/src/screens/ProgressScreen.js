@@ -5,12 +5,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { Card, Screen } from '../components/Screen';
 import { ReadingState } from '../components/ReadingComponents';
 import { api } from '../services/api';
+import { LearningReportSection } from '../components/LearningReportSection';
 import { colors } from '../theme';
 
-export function ProgressScreen() {
+export function ProgressScreen({ navigation }) {
   const [progress, setProgress] = useState(null);
   const [subjects, setSubjects] = useState([]);
   const [badges, setBadges] = useState([]);
+  const [report, setReport] = useState(null);
+  const [reportLoading, setReportLoading] = useState(true);
+  const [reportError, setReportError] = useState('');
   const [badgesLoading, setBadgesLoading] = useState(true);
   const [badgesError, setBadgesError] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -23,16 +27,33 @@ export function ProgressScreen() {
     setError('');
     setBadgesLoading(true);
     setBadgesError(false);
-    Promise.all([api.getMyProgress(), api.getSubjectProgress()])
-      .then(([myProgress, subjectData]) => {
+    setReportLoading(true);
+    setReportError('');
+    api.getLearningReport()
+      .then((result) => {
         if (!active) return;
-        setProgress(myProgress);
-        setSubjects(Array.isArray(subjectData.subjects) ? subjectData.subjects : []);
+        setReport(result);
+        setProgress(result.progress);
+        setSubjects(Array.isArray(result.subjects) ? result.subjects : []);
       })
-      .catch((requestError) => {
-        if (active) setError(requestError.message || 'Unable to load your progress. Please try again.');
+      .catch(async (requestError) => {
+        if (!active) return;
+        setReportError(requestError.message || 'Unable to load your learning report. Please try again.');
+        try {
+          const [myProgress, subjectData] = await Promise.all([api.getMyProgress(), api.getSubjectProgress()]);
+          if (!active) return;
+          setProgress(myProgress);
+          setSubjects(Array.isArray(subjectData.subjects) ? subjectData.subjects : []);
+        } catch (progressError) {
+          if (active) setError(progressError.message || 'Unable to load your progress. Please try again.');
+        }
       })
-      .finally(() => { if (active) setLoading(false); });
+      .finally(() => {
+        if (active) {
+          setLoading(false);
+          setReportLoading(false);
+        }
+      });
     api.getMyAchievements()
       .then((result) => { if (active) setBadges(Array.isArray(result.badges) ? result.badges : []); })
       .catch(() => { if (active) setBadgesError(true); })
@@ -111,6 +132,17 @@ export function ProgressScreen() {
               <Text style={styles.emptyText}>Your subject progress will appear here when lessons are available.</Text>
             </Card>
           )}
+
+          <LearningReportSection
+            report={report}
+            loading={reportLoading}
+            error={reportError}
+            onRetry={() => setReload((value) => value + 1)}
+            onOpenWritingSubmission={(submissionId) => navigation.navigate('Writing', {
+              screen: 'WritingSubmissionDetail',
+              params: { submissionId },
+            })}
+          />
 
           <View style={styles.sectionHeading}>
             <Text style={styles.sectionTitle}>Recent Learning Activities</Text>

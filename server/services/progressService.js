@@ -207,6 +207,10 @@ async function getSubjectProgress(userId) {
   return result.subjects;
 }
 
+async function getProgressSnapshot(userId) {
+  return readProgressSnapshot(userId);
+}
+
 async function awardXP(userId, activityType, lessonId, sourceId) {
   const xpEarned = XP_REWARDS[activityType];
   if (!xpEarned) throw new AppError('This activity cannot earn XP.', 400, 'INVALID_PROGRESS_ACTIVITY');
@@ -242,6 +246,7 @@ module.exports = {
   awardXP,
   calculateLevel,
   calculatePercentage,
+  getProgressSnapshot,
   getStudentProgress,
   getSubjectProgress,
 };

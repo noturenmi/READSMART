@@ -11,6 +11,7 @@ function createProgressRoutes(config) {
   router.get('/subjects', controller.getSubjectsProgress);
   router.get('/recommendations', controller.getRecommendations);
   router.get('/achievements', controller.getAchievements);
+  router.get('/report', controller.getLearningReport);
   return router;
 }
 

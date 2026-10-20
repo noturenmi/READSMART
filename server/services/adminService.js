@@ -7,6 +7,7 @@ const WritingActivity = require('../models/WritingActivity');
 const progressService = require('./progressService');
 const recommendationService = require('./recommendationService');
 const achievementService = require('./achievementService');
+const learningReportService = require('./learningReportService');
 const writingService = require('./writingService');
 const { rubricCriteria } = require('../utils/writingRubric');
 const { AppError } = require('../utils/AppError');
@@ -162,11 +163,21 @@ async function getStudent(userId) {
 
 async function getStudentProgress(userId) {
   const student = await getStudent(userId);
-  const progress = await progressService.getStudentProgress(userId);
-  const subjects = await progressService.getSubjectProgress(userId);
-  const { recommendations, emptyReason } = await recommendationService.getRecommendedLessons(userId, subjects);
-  const achievements = await achievementService.getStudentAchievements(userId);
-  return { student, progress, subjects, recommendations, recommendationsEmptyReason: emptyReason, achievements };
+  const progressSnapshot = await progressService.getProgressSnapshot(userId);
+  const [{ recommendations, emptyReason }, achievements, learningReport] = await Promise.all([
+    recommendationService.getRecommendedLessons(userId, progressSnapshot.subjects),
+    achievementService.getStudentAchievements(userId),
+    learningReportService.getLearningReport(userId, { progressSnapshot }),
+  ]);
+  return {
+    student,
+    progress: progressSnapshot.progress,
+    subjects: progressSnapshot.subjects,
+    recommendations,
+    recommendationsEmptyReason: emptyReason,
+    achievements,
+    learningReport,
+  };
 }
 
 async function getStudentWritingSubmissionHistory(userId, pagination) {
