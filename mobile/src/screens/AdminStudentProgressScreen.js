@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Screen } from '../components/Screen';
 import { ReadingState } from '../components/ReadingComponents';
-import { AdminCard, AdminHeader } from '../components/AdminComponents';
+import { AdminCard, AdminHeader, AdminSectionTitle } from '../components/AdminComponents';
 import { api } from '../services/api';
 import { colors } from '../theme';
 
@@ -65,6 +65,26 @@ export function AdminStudentProgressScreen({ navigation, route }) {
               <Text style={styles.subjectXP}>{subject.totalXP} XP earned in this subject</Text>
             </AdminCard>
           ))}
+          <AdminSectionTitle hint="Recommendations are based on this student's latest published-lesson assessments.">
+            Recommended lessons to review
+          </AdminSectionTitle>
+          {(data.recommendations || []).length ? data.recommendations.map((item) => (
+            <AdminCard key={item.lessonId} style={styles.recommendation}>
+              <Text style={styles.subjectCode}>{item.subjectCode} · {item.subjectName}</Text>
+              <Text style={styles.subjectName}>Lesson {item.lessonNumber}: {item.lessonTitle}</Text>
+              <Text style={styles.caption}>{item.reason}</Text>
+            </AdminCard>
+          )) : (
+            <AdminCard style={styles.recommendation}>
+              <Text style={styles.caption}>
+                {data.recommendationsEmptyReason === 'no_assessment_history'
+                  ? 'No assessment history is available for recommendations yet.'
+                  : data.recommendationsEmptyReason === 'assessment_data_incomplete'
+                    ? 'Some assessment records are incomplete, so recommendations could not be calculated safely.'
+                    : 'No lessons currently need review based on the latest assessment results.'}
+              </Text>
+            </AdminCard>
+          )}
         </>
       ) : null}
     </Screen>
@@ -107,4 +127,5 @@ const styles = StyleSheet.create({
   subjectName: { color: colors.ink, fontSize: 13, lineHeight: 18, fontWeight: '700' },
   percent: { color: colors.greenDark, fontSize: 12, fontWeight: '800' },
   subjectXP: { color: colors.greenDark, fontSize: 11, lineHeight: 16, fontWeight: '700' },
+  recommendation: { gap: 6, padding: 14 },
 });

@@ -9,6 +9,7 @@ function createProgressRoutes(config) {
   router.use(authorizeRole('student'));
   router.get('/me', controller.getMyProgress);
   router.get('/subjects', controller.getSubjectsProgress);
+  router.get('/recommendations', controller.getRecommendations);
   return router;
 }
 

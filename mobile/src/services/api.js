@@ -165,6 +165,9 @@ export const api = {
   getSubjectProgress() {
     return request('/progress/subjects', { authenticated: true });
   },
+  getRecommendedLessons() {
+    return request('/progress/recommendations', { authenticated: true });
+  },
   adminGetDashboard() {
     return request('/admin/dashboard', { authenticated: true });
   },
