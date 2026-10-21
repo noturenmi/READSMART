@@ -8,7 +8,7 @@ import { api } from '../services/api';
 import { colors } from '../theme';
 
 const questionTypes = ['key_idea', 'vocabulary', 'inference', 'interpretation', 'evaluation'];
-const blankQuestion = { question: '', questionType: 'key_idea', choices: ['', '', '', ''], correctAnswer: '0', explanation: '', points: '1', order: '', isPublished: false };
+const blankQuestion = { question: '', questionType: 'key_idea', choices: ['', '', '', ''], correctAnswer: '1', explanation: '', points: '1', order: '', isPublished: false };
 
 export function AdminQuestionsScreen({ navigation, route }) {
   const { lessonId, lessonTitle } = route.params || {};
