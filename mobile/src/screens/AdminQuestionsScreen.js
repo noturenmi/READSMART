@@ -54,19 +54,47 @@ export function AdminQuestionsScreen({ navigation, route }) {
   async function save() {
     setSaving(true);
     setMessage('');
+
+    const correctAnswerIndex = Number(form.correctAnswer);
+
+    if (
+      !Number.isInteger(correctAnswerIndex) ||
+      correctAnswerIndex < 1 ||
+      correctAnswerIndex > 4
+    ) {
+      setMessage('Correct choice must be between 1 and 4.');
+      setSaving(false);
+      return;
+    }
+
     const body = {
-      question: form.question.trim(), questionType: form.questionType,
+      question: form.question.trim(),
+      questionType: form.questionType,
       choices: form.choices.map((choice) => choice.trim()),
-      correctAnswer: Number(form.correctAnswer), explanation: form.explanation.trim(),
-      points: Number(form.points), order: Number(form.order), isPublished: form.isPublished,
+      correctAnswer: correctAnswerIndex,
+      explanation: form.explanation.trim(),
+      points: Number(form.points),
+      order: Number(form.order),
+      isPublished: form.isPublished,
     };
+
     try {
-      if (editingId) await api.adminUpdateQuestion(editingId, body);
-      else await api.adminCreateQuestion(lessonId, body);
+      if (editingId) {
+        await api.adminUpdateQuestion(editingId, body);
+      } else {
+        await api.adminCreateQuestion(lessonId, body);
+      }
+
       reset();
       setReload((n) => n + 1);
-    } catch (error) { setMessage(error.message || 'Unable to save question. Check all fields and the correct-choice index.'); }
-    finally { setSaving(false); }
+    } catch (error) {
+      setMessage(
+        error.message ||
+        'Unable to save question. Check all fields and the correct choice.'
+      );
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function toggle(question) {
@@ -94,7 +122,7 @@ export function AdminQuestionsScreen({ navigation, route }) {
         {form.choices.map((choice, index) => (
           <AdminField key={index} label={`Choice ${index + 1}`} value={choice} onChangeText={(value) => setForm((f) => ({ ...f, choices: f.choices.map((item, i) => i === index ? value : item) }))} />
         ))}
-        <AdminField label="Correct choice index (1–4)" value={form.correctAnswer} onChangeText={(correctAnswer) => setForm((f) => ({ ...f, correctAnswer }))} keyboardType="number-pad" />
+        <AdminField label="Correct choice (1–4)" value={form.correctAnswer} onChangeText={(correctAnswer) => { if (correctAnswer === '' || /^[1-4]$/.test(correctAnswer)) { setForm((f) => ({ ...f, correctAnswer })); } }} keyboardType="number-pad" />
         <AdminField label="Explanation" value={form.explanation} onChangeText={(explanation) => setForm((f) => ({ ...f, explanation }))} multiline />
         <View style={styles.row}>
           <View style={styles.half}><AdminField label="Points" value={form.points} onChangeText={(points) => setForm((f) => ({ ...f, points }))} keyboardType="number-pad" /></View>
@@ -116,7 +144,16 @@ export function AdminQuestionsScreen({ navigation, route }) {
           <Text style={styles.questionText}>{question.order}. {question.question}</Text>
           <Text style={styles.meta}>{question.questionType.replaceAll('_', ' ')} · {question.points} pt · {question.isPublished ? 'Published' : 'Unpublished'}</Text>
           {question.choices.map((choice, index) => (
-            <Text key={`${question.id}-${index}`} style={[styles.choice, index === question.correctAnswer && styles.correct]}>{String.fromCharCode(65 + index)}. {choice}{index === question.correctAnswer ? '  ✓ Correct' : ''}</Text>
+            <Text
+              key={`${question.id}-${index}`}
+              style={[
+                styles.choice,
+                index + 1 === Number(question.correctAnswer) && styles.correct,
+              ]}
+            >
+              {String.fromCharCode(65 + index)}. {choice}
+              {index + 1 === Number(question.correctAnswer) ? '  ✓ Correct' : ''}
+            </Text>
           ))}
           <Text style={styles.explanation}>Explanation: {question.explanation}</Text>
           <AdminInlineActions>
