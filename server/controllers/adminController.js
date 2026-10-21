@@ -62,7 +62,7 @@ const questionFields = {
   questionType: z.enum(questionTypes),
   choices: z.array(z.string().trim().min(1).max(500)).length(4)
     .refine((choices) => new Set(choices).size === 4, 'Choices must be unique.'),
-  correctAnswer: z.number().int().min(0).max(3),
+  correctAnswer: z.number().int().min(1).max(4),
   explanation: z.string().trim().min(10).max(1000),
   points: z.number().int().min(1).max(100),
   order: z.number().int().min(1),
