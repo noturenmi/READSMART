@@ -108,7 +108,7 @@ export function AdminQuestionsScreen({ navigation, route }) {
   return (
     <Screen>
       <AdminHeader title="Reading questions" subtitle={lessonTitle || 'Manage this lesson assessment.'} onBack={() => navigation.goBack()} />
-      <AdminSectionTitle hint="Correct-answer index uses zero-based choices: 1, 2, 3, or 4.">{editingId ? 'Edit question' : 'Add question'}</AdminSectionTitle>
+      <AdminSectionTitle hint="Enter the correct choice number: 1, 2, 3, or 4.">{editingId ? 'Edit question' : 'Add question'}</AdminSectionTitle>
       <AdminCard>
         <AdminField label="Question text" value={form.question} onChangeText={(question) => setForm((f) => ({ ...f, question }))} multiline />
         <Text style={styles.label}>Question type</Text>

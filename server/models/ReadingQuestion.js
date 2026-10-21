@@ -17,7 +17,7 @@ const readingQuestionSchema = new mongoose.Schema(
         message: 'Each reading question needs four unique choices.',
       },
     },
-    correctAnswer: { type: Number, required: true, min: 0, max: 3, validate: Number.isInteger, select: false },
+    correctAnswer: { type: Number, required: true, min: 1, max: 4, validate: Number.isInteger, select: false },
     explanation: { type: String, required: true, trim: true, minlength: 10, maxlength: 1000 },
     points: { type: Number, required: true, default: 1, min: 1, validate: Number.isInteger },
     order: { type: Number, required: true, min: 1, validate: Number.isInteger },

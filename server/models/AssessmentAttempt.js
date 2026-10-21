@@ -3,12 +3,12 @@ const mongoose = require('mongoose');
 const answerSchema = new mongoose.Schema(
   {
     questionId: { type: mongoose.Schema.Types.ObjectId, ref: 'ReadingQuestion', required: true },
-    selectedAnswer: { type: Number, required: true, min: 0, max: 3, validate: Number.isInteger },
+    selectedAnswer: { type: Number, required: true, min: 1, max: 4, validate: Number.isInteger },
     isCorrect: { type: Boolean, required: true },
     pointsEarned: { type: Number, required: true, min: 0, validate: Number.isInteger },
     questionText: { type: String, maxlength: 1200, select: false },
     choices: { type: [String], select: false },
-    correctAnswer: { type: Number, min: 0, max: 3, validate: Number.isInteger, select: false },
+    correctAnswer: { type: Number, min: 1, max: 4, validate: Number.isInteger, select: false },
     explanation: { type: String, maxlength: 1000, select: false },
     questionType: {
       type: String,
