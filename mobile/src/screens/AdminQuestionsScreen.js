@@ -80,7 +80,7 @@ export function AdminQuestionsScreen({ navigation, route }) {
   return (
     <Screen>
       <AdminHeader title="Reading questions" subtitle={lessonTitle || 'Manage this lesson assessment.'} onBack={() => navigation.goBack()} />
-      <AdminSectionTitle hint="Correct-answer index uses zero-based choices: 0, 1, 2, or 3.">{editingId ? 'Edit question' : 'Add question'}</AdminSectionTitle>
+      <AdminSectionTitle hint="Correct-answer index uses zero-based choices: 1, 2, 3, or 4.">{editingId ? 'Edit question' : 'Add question'}</AdminSectionTitle>
       <AdminCard>
         <AdminField label="Question text" value={form.question} onChangeText={(question) => setForm((f) => ({ ...f, question }))} multiline />
         <Text style={styles.label}>Question type</Text>
@@ -94,7 +94,7 @@ export function AdminQuestionsScreen({ navigation, route }) {
         {form.choices.map((choice, index) => (
           <AdminField key={index} label={`Choice ${index + 1}`} value={choice} onChangeText={(value) => setForm((f) => ({ ...f, choices: f.choices.map((item, i) => i === index ? value : item) }))} />
         ))}
-        <AdminField label="Correct choice index (0–3)" value={form.correctAnswer} onChangeText={(correctAnswer) => setForm((f) => ({ ...f, correctAnswer }))} keyboardType="number-pad" />
+        <AdminField label="Correct choice index (1–4)" value={form.correctAnswer} onChangeText={(correctAnswer) => setForm((f) => ({ ...f, correctAnswer }))} keyboardType="number-pad" />
         <AdminField label="Explanation" value={form.explanation} onChangeText={(explanation) => setForm((f) => ({ ...f, explanation }))} multiline />
         <View style={styles.row}>
           <View style={styles.half}><AdminField label="Points" value={form.points} onChangeText={(points) => setForm((f) => ({ ...f, points }))} keyboardType="number-pad" /></View>
