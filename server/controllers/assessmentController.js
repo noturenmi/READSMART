@@ -23,7 +23,7 @@ function validateAttemptId(attemptId) {
 const submitSchema = z.object({
   answers: z.array(z.object({
     questionId: z.string().regex(objectId, 'Enter a valid question ID.'),
-    selectedAnswer: z.number().int().min(0).max(3),
+    selectedAnswer: z.number().int().min(1).max(4),
   }).strict()).min(1).max(100),
 }).strict();
 
