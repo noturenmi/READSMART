@@ -43,7 +43,7 @@ export function AdminButton({ title, onPress, secondary = false, danger = false,
   );
 }
 
-export function AdminField({ label, value, onChangeText, multiline = false, keyboardType = 'default', placeholder, editable = true }) {
+export function AdminField({ label, value, onChangeText, multiline = false, keyboardType = 'default', placeholder, editable = true, maxLength, helperText, error }) {
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{label}</Text>
@@ -56,9 +56,12 @@ export function AdminField({ label, value, onChangeText, multiline = false, keyb
         placeholderTextColor={colors.muted}
         multiline={multiline}
         editable={editable}
+        maxLength={maxLength}
         textAlignVertical={multiline ? 'top' : 'center'}
         style={[styles.input, multiline && styles.multiline, !editable && styles.readOnly]}
       />
+      {helperText ? <Text style={styles.fieldHelper}>{helperText}</Text> : null}
+      {error ? <Text accessibilityRole="alert" style={styles.fieldError}>{error}</Text> : null}
     </View>
   );
 }
@@ -96,6 +99,8 @@ const styles = StyleSheet.create({
   secondaryText: { color: colors.greenDark },
   field: { gap: 6 },
   label: { color: colors.ink, fontSize: 12, fontWeight: '700' },
+  fieldHelper: { color: colors.muted, fontSize: 10, lineHeight: 15 },
+  fieldError: { color: '#9E3C36', fontSize: 11, lineHeight: 16 },
   input: { minHeight: 45, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, paddingHorizontal: 12, color: colors.ink, fontSize: 13 },
   multiline: { minHeight: 98, paddingTop: 11, lineHeight: 19 },
   readOnly: { opacity: 0.7 },

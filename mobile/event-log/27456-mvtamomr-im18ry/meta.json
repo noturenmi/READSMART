@@ -1,0 +1,29 @@
+{
+  "format": "v0-jsonl",
+  "pid": 27456,
+  "startedAt": 1793263236147,
+  "command": "expo export",
+  "cwd": "C:\\Users\\renmi\\Documents\\Codex\\2026-10-03\\READSMART\\mobile",
+  "maxSegments": 3,
+  "socket": "\\\\.\\pipe\\event-log-27456-mvtamomr-im18ry-live",
+  "ipcSocket": "\\\\.\\pipe\\event-log-27456-mvtamomr-im18ry-ipc",
+  "origin": {
+    "argv": [
+      "C:\\Users\\renmi\\Documents\\Codex\\2026-10-03\\READSMART\\mobile\\node_modules\\expo\\bin\\cli",
+      "export",
+      "--platform",
+      "android"
+    ],
+    "execPath": "C:\\Program Files\\nodejs\\node.exe",
+    "cwd": "C:\\Users\\renmi\\Documents\\Codex\\2026-10-03\\READSMART\\mobile",
+    "ppid": 24840,
+    "env": {
+      "npmLifecycleEvent": "npx",
+      "npmExecPath": "C:\\Users\\renmi\\AppData\\Roaming\\npm\\node_modules\\npm\\bin\\npm-cli.js",
+      "npmPackageName": "readsmart-mobile"
+    }
+  },
+  "metadata": {
+    "version": "58.1.17"
+  }
+}

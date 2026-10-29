@@ -4,6 +4,7 @@ const { AppError } = require('../utils/AppError');
 const { asyncHandler } = require('../utils/asyncHandler');
 const { sendSuccess } = require('../utils/apiResponse');
 const { validateBody } = require('../utils/validation');
+const { writingActivityLimits } = require('../utils/writingActivityLimits');
 const adminService = require('../services/adminService');
 const { rubricCriteria } = require('../utils/writingRubric');
 
@@ -84,9 +85,9 @@ const criterionSchema = z.object({
 const criteriaSchema = z.array(criterionSchema).length(5)
   .refine((criteria) => new Set(criteria.map(({ key }) => key)).size === criterionKeys.length, 'Include each rubric criterion exactly once.');
 const writingFields = {
-  title: z.string().trim().min(3).max(160),
-  prompt: z.string().trim().min(10).max(2000),
-  instructions: z.string().trim().min(10).max(1200),
+  title: z.string().trim().min(3).max(writingActivityLimits.title.max, 'Use no more than 160 characters.'),
+  prompt: z.string().trim().min(10).max(writingActivityLimits.prompt.max, 'Use no more than 4,000 characters.'),
+  instructions: z.string().trim().min(10).max(writingActivityLimits.instructions.max, 'Use no more than 4,000 characters.'),
   minimumWords: z.number().int().min(1).max(5000),
   maximumWords: z.number().int().min(1).max(10000),
   criteria: criteriaSchema.optional(),

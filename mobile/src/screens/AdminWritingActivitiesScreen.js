@@ -6,6 +6,11 @@ import { ReadingState } from '../components/ReadingComponents';
 import { AdminButton, AdminCard, AdminField, AdminHeader, AdminInlineActions, AdminSectionTitle } from '../components/AdminComponents';
 import { api } from '../services/api';
 import { colors } from '../theme';
+import {
+  getWritingActivityApiFeedback,
+  getWritingActivityLengthErrors,
+  WRITING_ACTIVITY_LIMITS,
+} from '../utils/writingActivityValidation';
 
 const blankActivity = { title: '', prompt: '', instructions: '', minimumWords: '100', maximumWords: '250' };
 
@@ -18,6 +23,7 @@ export function AdminWritingActivitiesScreen({ navigation, route }) {
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState(false);
   const [message, setMessage] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   const [reload, setReload] = useState(0);
 
   const load = useCallback(async () => {
@@ -31,24 +37,43 @@ export function AdminWritingActivitiesScreen({ navigation, route }) {
       setExists(Boolean(current));
       if (current) setForm({ title: current.title, prompt: current.prompt, instructions: current.instructions, minimumWords: String(current.minimumWords), maximumWords: String(current.maximumWords) });
       else setForm(blankActivity);
+      setFieldErrors({});
+      setMessage('');
     } catch { setFailed(true); }
     finally { setLoading(false); }
   }, [lessonId]);
 
   useFocusEffect(useCallback(() => { load(); }, [load, reload]));
 
+  function updateField(field, value) {
+    setForm((current) => ({ ...current, [field]: value }));
+    setFieldErrors((current) => ({ ...current, [field]: undefined }));
+    setMessage('');
+  }
+
   async function save() {
-    setSaving(true);
     setMessage('');
     const body = {
       title: form.title.trim(), prompt: form.prompt.trim(), instructions: form.instructions.trim(),
       minimumWords: Number(form.minimumWords), maximumWords: Number(form.maximumWords),
     };
+    const lengthErrors = getWritingActivityLengthErrors(body);
+    if (Object.keys(lengthErrors).length) {
+      setFieldErrors(lengthErrors);
+      setMessage('Please correct the highlighted fields before saving.');
+      return;
+    }
+    setFieldErrors({});
+    setSaving(true);
     try {
       if (exists && activity) await api.adminUpdateWritingActivity(activity.id, body);
       else await api.adminCreateWritingActivity(lessonId, body);
       setReload((value) => value + 1);
-    } catch (error) { setMessage(error.message || 'Unable to save writing activity. Check the prompt and word range.'); }
+    } catch (error) {
+      const feedback = getWritingActivityApiFeedback(error);
+      setFieldErrors(feedback.fieldErrors);
+      setMessage(feedback.message);
+    }
     finally { setSaving(false); }
   }
 
@@ -69,9 +94,32 @@ export function AdminWritingActivitiesScreen({ navigation, route }) {
       {!loading && !failed ? <>
         <AdminSectionTitle hint="One activity is supported per lesson. Existing student submissions are retained when an activity is unpublished.">{activity ? 'Edit activity' : 'Add activity'}</AdminSectionTitle>
         <AdminCard>
-          <AdminField label="Activity title" value={form.title} onChangeText={(title) => setForm((f) => ({ ...f, title }))} />
-          <AdminField label="Writing prompt" value={form.prompt} onChangeText={(prompt) => setForm((f) => ({ ...f, prompt }))} multiline />
-          <AdminField label="Instructions" value={form.instructions} onChangeText={(instructions) => setForm((f) => ({ ...f, instructions }))} multiline />
+          <AdminField
+            label="Activity title"
+            value={form.title}
+            onChangeText={(title) => updateField('title', title)}
+            maxLength={WRITING_ACTIVITY_LIMITS.title}
+            helperText={`${form.title.length}/${WRITING_ACTIVITY_LIMITS.title} characters`}
+            error={fieldErrors.title}
+          />
+          <AdminField
+            label="Writing prompt"
+            value={form.prompt}
+            onChangeText={(prompt) => updateField('prompt', prompt)}
+            multiline
+            maxLength={WRITING_ACTIVITY_LIMITS.prompt}
+            helperText={`${form.prompt.length}/${WRITING_ACTIVITY_LIMITS.prompt.toLocaleString()} characters`}
+            error={fieldErrors.prompt}
+          />
+          <AdminField
+            label="Instructions"
+            value={form.instructions}
+            onChangeText={(instructions) => updateField('instructions', instructions)}
+            multiline
+            maxLength={WRITING_ACTIVITY_LIMITS.instructions}
+            helperText={`${form.instructions.length}/${WRITING_ACTIVITY_LIMITS.instructions.toLocaleString()} characters`}
+            error={fieldErrors.instructions}
+          />
           <View style={styles.row}>
             <View style={styles.half}><AdminField label="Minimum words" value={form.minimumWords} onChangeText={(minimumWords) => setForm((f) => ({ ...f, minimumWords }))} keyboardType="number-pad" /></View>
             <View style={styles.half}><AdminField label="Maximum words" value={form.maximumWords} onChangeText={(maximumWords) => setForm((f) => ({ ...f, maximumWords }))} keyboardType="number-pad" /></View>

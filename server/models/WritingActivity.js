@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { writingActivityLimits } = require('../utils/writingActivityLimits');
 
 const criterionSchema = new mongoose.Schema(
   {
@@ -17,9 +18,27 @@ const criterionSchema = new mongoose.Schema(
 const writingActivitySchema = new mongoose.Schema(
   {
     lesson: { type: mongoose.Schema.Types.ObjectId, ref: 'Lesson', required: true },
-    title: { type: String, required: true, trim: true, minlength: 3, maxlength: 160 },
-    prompt: { type: String, required: true, trim: true, minlength: 10, maxlength: 2000 },
-    instructions: { type: String, required: true, trim: true, minlength: 10, maxlength: 1200 },
+    title: {
+      type: String,
+      required: true,
+      trim: true,
+      minlength: 3,
+      maxlength: [writingActivityLimits.title.max, 'Activity title must be 160 characters or fewer.'],
+    },
+    prompt: {
+      type: String,
+      required: true,
+      trim: true,
+      minlength: 10,
+      maxlength: [writingActivityLimits.prompt.max, 'Writing prompt must be 4,000 characters or fewer.'],
+    },
+    instructions: {
+      type: String,
+      required: true,
+      trim: true,
+      minlength: 10,
+      maxlength: [writingActivityLimits.instructions.max, 'Instructions must be 4,000 characters or fewer.'],
+    },
     minimumWords: { type: Number, required: true, default: 100, min: 1, max: 5000, validate: Number.isInteger },
     maximumWords: { type: Number, required: true, default: 250, min: 1, max: 10000, validate: Number.isInteger },
     criteria: {
