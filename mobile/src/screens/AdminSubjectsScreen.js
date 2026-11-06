@@ -6,6 +6,7 @@ import { ReadingState } from '../components/ReadingComponents';
 import { AdminButton, AdminCard, AdminField, AdminHeader, AdminInlineActions, AdminSectionTitle } from '../components/AdminComponents';
 import { api } from '../services/api';
 import { colors } from '../theme';
+import { getSubjectCodeError, SUBJECT_CODE_LIMITS } from '../utils/subjectCodeValidation';
 
 const emptyForm = { name: '', code: '', description: '', order: '' };
 
@@ -17,6 +18,7 @@ export function AdminSubjectsScreen({ navigation }) {
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState(false);
   const [message, setMessage] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   const [reload, setReload] = useState(0);
 
   const load = useCallback(async () => {
@@ -37,26 +39,41 @@ export function AdminSubjectsScreen({ navigation }) {
   function edit(subject) {
     setEditingId(subject.id);
     setForm({ name: subject.name, code: subject.code, description: subject.description || '', order: String(subject.order) });
+    setFieldErrors({});
     setMessage('');
   }
 
   function reset() {
     setEditingId(null);
     setForm(emptyForm);
+    setFieldErrors({});
     setMessage('');
   }
 
   async function save() {
-    setSaving(true);
     setMessage('');
     const body = { name: form.name.trim(), code: form.code.trim().toUpperCase(), description: form.description.trim(), order: Number(form.order) };
+    const codeError = getSubjectCodeError(form.code);
+    if (codeError) {
+      setFieldErrors((current) => ({ ...current, code: codeError }));
+      setMessage('Please correct the subject code before saving.');
+      return;
+    }
+    setFieldErrors({});
+    setSaving(true);
     try {
       if (editingId) await api.adminUpdateSubject(editingId, body);
       else await api.adminCreateSubject(body);
       reset();
       setReload((value) => value + 1);
     } catch (error) {
-      setMessage(error.message || 'Unable to save this subject.');
+      const codeDetail = Array.isArray(error.details) ? error.details.find((detail) => detail.field === 'code') : null;
+      if (codeDetail) {
+        setFieldErrors((current) => ({ ...current, code: codeDetail.message }));
+        setMessage('Please correct the subject code before saving.');
+      } else {
+        setMessage(error.message || 'Unable to save this subject.');
+      }
     } finally {
       setSaving(false);
     }
@@ -78,7 +95,18 @@ export function AdminSubjectsScreen({ navigation }) {
       <AdminSectionTitle hint="Name and subject code must be unique.">{editingId ? 'Edit subject' : 'Add subject'}</AdminSectionTitle>
       <AdminCard>
         <AdminField label="Subject name" value={form.name} onChangeText={(name) => setForm((f) => ({ ...f, name }))} />
-        <AdminField label="Code (2–8 letters)" value={form.code} onChangeText={(code) => setForm((f) => ({ ...f, code }))} />
+        <AdminField
+          label="Subject code"
+          value={form.code}
+          onChangeText={(code) => {
+            setForm((current) => ({ ...current, code }));
+            setFieldErrors((current) => ({ ...current, code: undefined }));
+            setMessage('');
+          }}
+          maxLength={SUBJECT_CODE_LIMITS.max}
+          helperText={`2–${SUBJECT_CODE_LIMITS.max} characters · letters/numbers; hyphens between parts · saved uppercase (${form.code.length}/${SUBJECT_CODE_LIMITS.max})`}
+          error={fieldErrors.code}
+        />
         <AdminField label="Description" value={form.description} onChangeText={(description) => setForm((f) => ({ ...f, description }))} multiline />
         <AdminField label="Display order" value={form.order} onChangeText={(order) => setForm((f) => ({ ...f, order }))} keyboardType="number-pad" />
         {message ? <Text accessibilityRole="alert" style={styles.message}>{message}</Text> : null}

@@ -1,12 +1,12 @@
 {
   "format": "v0-jsonl",
-  "pid": 27456,
-  "startedAt": 1793263236147,
+  "pid": 20340,
+  "startedAt": 1793957347903,
   "command": "expo export",
   "cwd": "C:\\Users\\renmi\\Documents\\Codex\\2026-10-03\\READSMART\\mobile",
   "maxSegments": 3,
-  "socket": "\\\\.\\pipe\\event-log-27456-mvtamomr-im18ry-live",
-  "ipcSocket": "\\\\.\\pipe\\event-log-27456-mvtamomr-im18ry-ipc",
+  "socket": "\\\\.\\pipe\\event-log-20340-mw4rvwov-hc02q1-live",
+  "ipcSocket": "\\\\.\\pipe\\event-log-20340-mw4rvwov-hc02q1-ipc",
   "origin": {
     "argv": [
       "C:\\Users\\renmi\\Documents\\Codex\\2026-10-03\\READSMART\\mobile\\node_modules\\expo\\bin\\cli",
@@ -16,7 +16,7 @@
     ],
     "execPath": "C:\\Program Files\\nodejs\\node.exe",
     "cwd": "C:\\Users\\renmi\\Documents\\Codex\\2026-10-03\\READSMART\\mobile",
-    "ppid": 24840,
+    "ppid": 7332,
     "env": {
       "npmLifecycleEvent": "npx",
       "npmExecPath": "C:\\Users\\renmi\\AppData\\Roaming\\npm\\node_modules\\npm\\bin\\npm-cli.js",
@@ -24,6 +24,6 @@
     }
   },
   "metadata": {
-    "version": "58.1.17"
+    "version": "58.1.19"
   }
 }

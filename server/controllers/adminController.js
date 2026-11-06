@@ -5,6 +5,7 @@ const { asyncHandler } = require('../utils/asyncHandler');
 const { sendSuccess } = require('../utils/apiResponse');
 const { validateBody } = require('../utils/validation');
 const { writingActivityLimits } = require('../utils/writingActivityLimits');
+const { subjectCodeLimits, subjectCodePattern } = require('../utils/subjectCodeValidation');
 const adminService = require('../services/adminService');
 const { rubricCriteria } = require('../utils/writingRubric');
 
@@ -20,7 +21,10 @@ function validateId(value, label) {
 
 const subjectFields = {
   name: z.string().trim().min(2).max(120),
-  code: z.string().trim().toUpperCase().regex(/^[A-Z]{2,8}$/),
+  code: z.string().trim().toUpperCase()
+    .min(subjectCodeLimits.min, `Use at least ${subjectCodeLimits.min} characters.`)
+    .max(subjectCodeLimits.max, `Use no more than ${subjectCodeLimits.max} characters.`)
+    .regex(subjectCodePattern, 'Use uppercase letters and numbers, with hyphens only between code parts.'),
   description: z.string().trim().max(500),
   order: z.number().int().min(0),
   isActive: z.boolean(),
