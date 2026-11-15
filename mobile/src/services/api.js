@@ -202,6 +202,18 @@ export const api = {
   getDailyGoalHistory(page = 1, limit = 14) {
     return request(`/daily-goals/history?page=${page}&limit=${limit}`, { authenticated: true });
   },
+  getNotifications(page = 1, limit = 25) {
+    return request(`/notifications?page=${page}&limit=${limit}`, { authenticated: true });
+  },
+  getUnreadNotificationCount() {
+    return request('/notifications/unread-count', { authenticated: true });
+  },
+  markNotificationRead(notificationId) {
+    return request(`/notifications/${encodeURIComponent(notificationId)}/read`, { method: 'PATCH', authenticated: true });
+  },
+  markAllNotificationsRead() {
+    return request('/notifications/read-all', { method: 'PATCH', authenticated: true });
+  },
   adminGetDashboard() {
     return request('/admin/dashboard', { authenticated: true });
   },

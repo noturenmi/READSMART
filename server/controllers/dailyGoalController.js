@@ -2,6 +2,7 @@ const { AppError } = require('../utils/AppError');
 const { asyncHandler } = require('../utils/asyncHandler');
 const { sendSuccess } = require('../utils/apiResponse');
 const dailyGoalService = require('../services/dailyGoalService');
+const notificationService = require('../services/notificationService');
 
 const targetKeys = ['readingLessons', 'assessments', 'writingActivities'];
 
@@ -41,13 +42,17 @@ function validatePagination(req, _res, next) {
   return next();
 }
 
-const getToday = asyncHandler(async (req, res) => (
-  sendSuccess(res, 200, { dailyGoal: await dailyGoalService.getTodayGoals(req.user.id) })
-));
+const getToday = asyncHandler(async (req, res) => {
+  const dailyGoal = await dailyGoalService.getTodayGoals(req.user.id);
+  try { await notificationService.notifyDailyGoalCompletion(req.user.id); } catch {}
+  return sendSuccess(res, 200, { dailyGoal });
+});
 
-const updateToday = asyncHandler(async (req, res) => (
-  sendSuccess(res, 200, { dailyGoal: await dailyGoalService.updateTodayTargets(req.user.id, req.validatedTargets) })
-));
+const updateToday = asyncHandler(async (req, res) => {
+  const dailyGoal = await dailyGoalService.updateTodayTargets(req.user.id, req.validatedTargets);
+  try { await notificationService.notifyDailyGoalCompletion(req.user.id); } catch {}
+  return sendSuccess(res, 200, { dailyGoal });
+});
 
 const getHistory = asyncHandler(async (req, res) => (
   sendSuccess(res, 200, await dailyGoalService.getGoalHistory(req.user.id, req.pagination))

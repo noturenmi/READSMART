@@ -4,6 +4,7 @@ const WritingActivity = require('../models/WritingActivity');
 const WritingSubmission = require('../models/WritingSubmission');
 const progressService = require('./progressService');
 const achievementService = require('./achievementService');
+const notificationService = require('./notificationService');
 const { AppError } = require('../utils/AppError');
 const { criterionFeedback, overallFeedbackFor, ratingLabels, rubricCriteria } = require('../utils/writingRubric');
 
@@ -319,10 +320,24 @@ async function submitLessonWriting(userId, lessonId, writingActivityId, response
     if (!concurrentRequest) throw error;
     return reuseSubmissionRequest(concurrentRequest, userId, lesson, activity, cleanResponse);
   }
+  await ensureWritingNotification(userId, submission, lesson, activity);
   await progressService.awardXP(userId, 'writing_activity', lesson._id, submission._id);
   await achievementService.refreshAfterCompletedActivity(userId);
+  try {
+    await notificationService.notifyDailyGoalCompletion(userId);
+  } catch {}
 
   return serializeSubmissionResult(submission, lesson, activity);
+}
+
+async function ensureWritingNotification(userId, submission, lesson, activity) {
+  try {
+    await notificationService.createWritingFeedback({
+      userId,
+      submissionId: submission._id,
+      lessonId: lesson._id || activity.lesson,
+    });
+  } catch {}
 }
 
 async function reuseSubmissionRequest(submission, userId, lesson, activity, response) {
@@ -331,8 +346,12 @@ async function reuseSubmissionRequest(submission, userId, lesson, activity, resp
     || submission.response !== response) {
     throw new AppError('This submission request was already used for a different response.', 409, 'SUBMISSION_REQUEST_REUSED');
   }
+  await ensureWritingNotification(userId, submission, lesson, activity);
   await progressService.awardXP(userId, 'writing_activity', lesson._id, submission._id);
   await achievementService.refreshAfterCompletedActivity(userId);
+  try {
+    await notificationService.notifyDailyGoalCompletion(userId);
+  } catch {}
   return serializeSubmissionResult(submission, lesson, activity);
 }
 

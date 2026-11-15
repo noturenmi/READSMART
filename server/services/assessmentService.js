@@ -3,6 +3,7 @@ const Lesson = require('../models/Lesson');
 const ReadingQuestion = require('../models/ReadingQuestion');
 const progressService = require('./progressService');
 const achievementService = require('./achievementService');
+const notificationService = require('./notificationService');
 const { AppError } = require('../utils/AppError');
 
 const publishedLessonFilter = { isPublished: true, contentStatus: 'ready' };
@@ -116,8 +117,15 @@ async function submitLessonAssessment(userId, lessonId, submittedAnswers) {
     percentage,
     submittedAt: new Date(),
   });
+  // Notifications are supplementary; a notification-store failure must not discard a saved result.
+  try {
+    await notificationService.createAssessmentResult({ userId, attemptId: attempt._id, lessonId: lesson._id });
+  } catch {}
   await progressService.awardXP(userId, 'reading_assessment', lesson._id, attempt._id);
   await achievementService.refreshAfterCompletedActivity(userId);
+  try {
+    await notificationService.notifyDailyGoalCompletion(userId);
+  } catch {}
 
   return {
     attemptId: String(attempt._id),

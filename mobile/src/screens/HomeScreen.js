@@ -13,6 +13,7 @@ export function HomeScreen({ navigation }) {
   const [recommendationsLoading, setRecommendationsLoading] = useState(true);
   const [recommendationsError, setRecommendationsError] = useState(false);
   const [recommendationsReload, setRecommendationsReload] = useState(0);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useFocusEffect(useCallback(() => {
     let active = true;
@@ -25,6 +26,14 @@ export function HomeScreen({ navigation }) {
     return () => { active = false; };
   }, [recommendationsReload]));
 
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    api.getUnreadNotificationCount()
+      .then((result) => { if (active) setUnreadCount(result.unreadCount || 0); })
+      .catch(() => { if (active) setUnreadCount(0); });
+    return () => { active = false; };
+  }, []));
+
   const openRecommendedLesson = (lessonId) => {
     navigation.navigate('Reading', { screen: 'Lesson', params: { lessonId } });
   };
@@ -33,12 +42,27 @@ export function HomeScreen({ navigation }) {
   return (
     <Screen>
       <View style={styles.header}>
-        <View>
+        <View style={styles.headerCopy}>
           <Text style={styles.eyebrow}>READSMART · HUMSS</Text>
           <Text style={styles.greeting}>Good day, learner</Text>
           <Text style={styles.subheading}>A little progress every day adds up.</Text>
         </View>
-        <View style={styles.avatar}><Ionicons name="school-outline" size={24} color={colors.green} /></View>
+        <View style={styles.headerActions}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={unreadCount ? `Notifications, ${unreadCount} unread` : 'Notifications'}
+            onPress={() => navigation.navigate('Notifications')}
+            style={({ pressed }) => [styles.notificationButton, pressed && styles.pressed]}
+          >
+            <Ionicons name="notifications-outline" size={23} color={colors.greenDark} />
+            {unreadCount > 0 ? (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
+              </View>
+            ) : null}
+          </Pressable>
+          <View style={styles.avatar}><Ionicons name="school-outline" size={24} color={colors.green} /></View>
+        </View>
       </View>
 
       <Pressable accessibilityRole="button" accessibilityLabel="Browse reading materials" onPress={() => navigation.navigate('Reading')}>
@@ -152,10 +176,15 @@ function Stat({ icon, value, label, tint }) {
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 },
+  headerCopy: { flex: 1, minWidth: 0, paddingRight: 8 },
   eyebrow: { color: colors.green, fontSize: 11, fontWeight: '800', letterSpacing: 1 },
   greeting: { color: colors.ink, fontSize: 25, fontWeight: '800', marginTop: 5 },
   subheading: { color: colors.muted, fontSize: 13, marginTop: 5 },
   avatar: { width: 48, height: 48, borderRadius: 16, backgroundColor: colors.greenLight, alignItems: 'center', justifyContent: 'center' },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  notificationButton: { width: 44, height: 44, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  notificationBadge: { position: 'absolute', top: -4, right: -4, minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center', backgroundColor: '#B94236', borderWidth: 1, borderColor: colors.surface },
+  notificationBadgeText: { color: '#FFFFFF', fontSize: 9, lineHeight: 12, fontWeight: '800' },
   hero: { backgroundColor: colors.greenLight, borderColor: '#D8E8DC', padding: 19 },
   heroIcon: { width: 42, height: 42, backgroundColor: '#D5E8D9', borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
   heroTitle: { color: colors.greenDark, fontSize: 19, fontWeight: '800' },
