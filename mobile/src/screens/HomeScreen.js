@@ -50,6 +50,22 @@ export function HomeScreen({ navigation }) {
       </Card>
       </Pressable>
 
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Open Daily Learning Goals"
+        onPress={() => navigation.navigate('DailyGoals')}
+        style={({ pressed }) => pressed && styles.pressed}
+      >
+        <Card style={styles.dailyGoalsCard}>
+          <View style={styles.dailyGoalsIcon}><Ionicons name="calendar-outline" size={21} color={colors.greenDark} /></View>
+          <View style={styles.dailyGoalsCopy}>
+            <Text style={styles.dailyGoalsTitle}>Daily Learning Goals</Text>
+            <Text style={styles.dailyGoalsText}>Set today’s reading, assessment, and writing targets.</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+        </Card>
+      </Pressable>
+
       <SectionTitle title="Recommended Lessons to Review" />
       {recommendationsLoading ? (
         <ReadingState kind="loading" title="Checking your recent assessment results…" />
@@ -145,6 +161,11 @@ const styles = StyleSheet.create({
   heroTitle: { color: colors.greenDark, fontSize: 19, fontWeight: '800' },
   heroText: { color: '#496456', fontSize: 14, lineHeight: 21, marginTop: 7 },
   heroLink: { color: colors.green, fontSize: 13, fontWeight: '800', marginTop: 15 },
+  dailyGoalsCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
+  dailyGoalsIcon: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.greenLight },
+  dailyGoalsCopy: { flex: 1, minWidth: 0 },
+  dailyGoalsTitle: { color: colors.greenDark, fontSize: 14, lineHeight: 19, fontWeight: '800' },
+  dailyGoalsText: { color: colors.muted, fontSize: 12, lineHeight: 18, marginTop: 3 },
   recommendationCard: { gap: 12 },
   recommendationHeading: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   recommendationIcon: { width: 36, height: 36, borderRadius: 12, backgroundColor: colors.greenLight, alignItems: 'center', justifyContent: 'center' },

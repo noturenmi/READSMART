@@ -9,6 +9,7 @@ const { createWritingRoutes } = require('./routes/writingRoutes');
 const { createProgressRoutes } = require('./routes/progressRoutes');
 const { createAdminRoutes } = require('./routes/adminRoutes');
 const { createBookmarkRoutes } = require('./routes/bookmarkRoutes');
+const { createDailyGoalRoutes } = require('./routes/dailyGoalRoutes');
 const { errorHandler, notFound } = require('./middleware/errorHandler');
 
 function createApp(config) {
@@ -30,6 +31,7 @@ function createApp(config) {
   app.use('/api/writing', createWritingRoutes(config));
   app.use('/api/progress', createProgressRoutes(config));
   app.use('/api/bookmarks', createBookmarkRoutes(config));
+  app.use('/api/daily-goals', createDailyGoalRoutes(config));
   app.use('/api/admin', createAdminRoutes(config));
 
   app.use(notFound);

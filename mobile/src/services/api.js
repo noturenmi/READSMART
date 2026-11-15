@@ -193,6 +193,15 @@ export const api = {
   getLearningReport() {
     return request('/progress/report', { authenticated: true });
   },
+  getDailyGoalsToday() {
+    return request('/daily-goals/today', { authenticated: true });
+  },
+  updateDailyGoalTargets(targets) {
+    return request('/daily-goals/today', { method: 'PUT', body: { targets }, authenticated: true });
+  },
+  getDailyGoalHistory(page = 1, limit = 14) {
+    return request(`/daily-goals/history?page=${page}&limit=${limit}`, { authenticated: true });
+  },
   adminGetDashboard() {
     return request('/admin/dashboard', { authenticated: true });
   },

@@ -2,7 +2,7 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { CommonActions } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { HomeScreen } from '../screens/HomeScreen';
+import { HomeNavigator } from './HomeNavigator';
 import { ReadingNavigator } from './ReadingNavigator';
 import { WritingNavigator } from './WritingNavigator';
 import { ProgressScreen } from '../screens/ProgressScreen';
@@ -39,7 +39,7 @@ export function StudentTabs() {
         },
       })}
     >
-      <Tabs.Screen name="Home" component={HomeScreen} />
+      <Tabs.Screen name="Home" component={HomeNavigator} />
       <Tabs.Screen
         name="Reading"
         component={ReadingNavigator}
