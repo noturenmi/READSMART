@@ -40,5 +40,6 @@ const assessmentAttemptSchema = new mongoose.Schema(
 
 assessmentAttemptSchema.index({ user: 1, lesson: 1, submittedAt: -1 });
 assessmentAttemptSchema.index({ user: 1, submittedAt: -1 });
+assessmentAttemptSchema.index({ submittedAt: -1 });
 
 module.exports = mongoose.model('AssessmentAttempt', assessmentAttemptSchema);

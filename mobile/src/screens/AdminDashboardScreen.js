@@ -67,6 +67,18 @@ export function AdminDashboardScreen({ navigation }) {
         </View>
       ) : null}
 
+      <AdminSectionTitle hint="Review student activity, score trends, and subject performance.">Learning Analytics</AdminSectionTitle>
+      <Pressable accessibilityRole="button" onPress={() => navigation.navigate('AdminLearningAnalytics')}>
+        <AdminCard style={styles.shortcut}>
+          <View style={styles.shortcutIcon}><Ionicons name="bar-chart-outline" size={20} color={colors.greenDark} /></View>
+          <View style={styles.shortcutCopy}>
+            <Text style={styles.shortcutTitle}>Open learning analytics</Text>
+            <Text style={styles.shortcutSubtitle}>Filter performance and activity by period and subject</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+        </AdminCard>
+      </Pressable>
+
       <AdminSectionTitle hint="Administrator access is enforced by the API as well as this role-specific navigation.">Manage READSMART</AdminSectionTitle>
       {shortcuts.map(([title, subtitle, icon, screen]) => (
         <Pressable key={screen} accessibilityRole="button" onPress={() => navigation.navigate(screen)}>

@@ -7,6 +7,7 @@ import { AdminSubjectsScreen } from '../screens/AdminSubjectsScreen';
 import { AdminLessonsScreen } from '../screens/AdminLessonsScreen';
 import { AdminQuestionsScreen } from '../screens/AdminQuestionsScreen';
 import { AdminWritingActivitiesScreen } from '../screens/AdminWritingActivitiesScreen';
+import { AdminLearningAnalyticsScreen } from '../screens/AdminLearningAnalyticsScreen';
 import { WritingHistoryScreen, WritingSubmissionDetailScreen } from '../screens/WritingHistoryScreen';
 
 const Stack = createNativeStackNavigator();
@@ -15,6 +16,7 @@ export function AdminNavigator() {
   return (
     <Stack.Navigator initialRouteName="AdminDashboard" screenOptions={{ headerShown: false }}>
       <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
+      <Stack.Screen name="AdminLearningAnalytics" component={AdminLearningAnalyticsScreen} />
       <Stack.Screen name="AdminUsers" component={AdminUsersScreen} />
       <Stack.Screen name="AdminStudentProgress" component={AdminStudentProgressScreen} />
       <Stack.Screen name="AdminSubjects" component={AdminSubjectsScreen} />

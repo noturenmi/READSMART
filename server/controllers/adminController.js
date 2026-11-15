@@ -7,6 +7,7 @@ const { validateBody } = require('../utils/validation');
 const { writingActivityLimits } = require('../utils/writingActivityLimits');
 const { subjectCodeLimits, subjectCodePattern } = require('../utils/subjectCodeValidation');
 const adminService = require('../services/adminService');
+const adminLearningAnalyticsService = require('../services/adminLearningAnalyticsService');
 const { rubricCriteria } = require('../utils/writingRubric');
 
 const idPattern = /^[a-f\d]{24}$/i;
@@ -106,6 +107,17 @@ const createWritingValidator = validateBody(z.object({
 const updateWritingValidator = validateBody(z.object(writingFields).partial().strict());
 
 const dashboard = asyncHandler(async (_req, res) => sendSuccess(res, 200, await adminService.getDashboard()));
+
+const learningAnalytics = asyncHandler(async (req, res) => {
+  if (Object.keys(req.query).some((key) => key !== 'period')) {
+    throw new AppError('Only a period filter is supported.', 400, 'INVALID_ANALYTICS_FILTER');
+  }
+  const period = req.query.period || 'weekly';
+  if (!adminLearningAnalyticsService.PERIODS.includes(period)) {
+    throw new AppError('Choose daily, weekly, monthly, or allTime analytics.', 400, 'INVALID_ANALYTICS_PERIOD');
+  }
+  return sendSuccess(res, 200, await adminLearningAnalyticsService.getAdminLearningAnalytics(period));
+});
 
 const listUsers = asyncHandler(async (req, res) => {
   const page = Number(req.query.page || 1);
@@ -220,6 +232,7 @@ module.exports = {
   getUserProgress,
   getUserWritingSubmission,
   getUserWritingSubmissionHistory,
+  learningAnalytics,
   getWritingActivity,
   listLessons,
   listQuestions,

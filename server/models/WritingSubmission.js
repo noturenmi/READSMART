@@ -69,6 +69,7 @@ writingSubmissionSchema.pre('validate', function validateCalculatedResult() {
 
 writingSubmissionSchema.index({ user: 1, lesson: 1, submittedAt: -1 });
 writingSubmissionSchema.index({ user: 1, writingActivity: 1, submittedAt: -1 });
+writingSubmissionSchema.index({ submittedAt: -1 });
 writingSubmissionSchema.index(
   { user: 1, requestKey: 1 },
   { unique: true, partialFilterExpression: { requestKey: { $type: 'string' } } },

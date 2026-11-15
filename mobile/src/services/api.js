@@ -205,6 +205,9 @@ export const api = {
   adminGetDashboard() {
     return request('/admin/dashboard', { authenticated: true });
   },
+  adminGetLearningAnalytics(period = 'weekly') {
+    return request(`/admin/analytics?period=${encodeURIComponent(period)}`, { authenticated: true });
+  },
   adminGetUsers(page = 1, limit = 20) {
     return request(`/admin/users?page=${page}&limit=${limit}`, { authenticated: true });
   },

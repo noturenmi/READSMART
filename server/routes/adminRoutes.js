@@ -8,6 +8,7 @@ function createAdminRoutes(config) {
   router.use(createAuthenticate(config), authorizeRole('admin'));
 
   router.get('/dashboard', controller.dashboard);
+  router.get('/analytics', controller.learningAnalytics);
 
   router.get('/users', controller.listUsers);
   router.get('/users/:userId', controller.getUser);
