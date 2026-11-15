@@ -55,12 +55,12 @@ export function AdminQuestionsScreen({ navigation, route }) {
     setSaving(true);
     setMessage('');
 
-    const correctAnswerIndex = Number(form.correctAnswer);
+    const correctAnswerNumber = Number(form.correctAnswer);
 
     if (
-      !Number.isInteger(correctAnswerIndex) ||
-      correctAnswerIndex < 1 ||
-      correctAnswerIndex > 4
+      !Number.isInteger(correctAnswerNumber) ||
+      correctAnswerNumber < 1 ||
+      correctAnswerNumber > 4
     ) {
       setMessage('Correct choice must be between 1 and 4.');
       setSaving(false);
@@ -71,7 +71,7 @@ export function AdminQuestionsScreen({ navigation, route }) {
       question: form.question.trim(),
       questionType: form.questionType,
       choices: form.choices.map((choice) => choice.trim()),
-      correctAnswer: correctAnswerIndex,
+      correctAnswer: correctAnswerNumber,
       explanation: form.explanation.trim(),
       points: Number(form.points),
       order: Number(form.order),
@@ -151,7 +151,7 @@ export function AdminQuestionsScreen({ navigation, route }) {
                 index + 1 === Number(question.correctAnswer) && styles.correct,
               ]}
             >
-              {String.fromCharCode(65 + index)}. {choice}
+              {index + 1}. {choice}
               {index + 1 === Number(question.correctAnswer) ? '  ✓ Correct' : ''}
             </Text>
           ))}

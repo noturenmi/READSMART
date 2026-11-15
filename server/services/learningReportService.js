@@ -64,8 +64,8 @@ function assessmentQuestionSetSignature(attempt) {
       || answer.choices.length !== 4
       || answer.choices.some((choice) => typeof choice !== 'string' || !choice.trim())
       || !Number.isInteger(answer.correctAnswer)
-      || answer.correctAnswer < 0
-      || answer.correctAnswer > 3
+      || answer.correctAnswer < 1
+      || answer.correctAnswer > 4
       || !Number.isInteger(answer.order)
       || answer.order < 1) return null;
     return {

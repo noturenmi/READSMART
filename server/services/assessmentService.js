@@ -61,7 +61,7 @@ async function submitLessonAssessment(userId, lessonId, submittedAnswers) {
   const answers = submittedAnswers.map(({ questionId, selectedAnswer }) => {
     const question = questionsById.get(questionId.toLowerCase());
     if (!question) throw new AppError('A question is not available for this lesson.', 404, 'QUESTION_NOT_FOUND');
-    if (!Number.isInteger(selectedAnswer) || selectedAnswer < 0 || selectedAnswer >= question.choices.length) {
+    if (!Number.isInteger(selectedAnswer) || selectedAnswer < 1 || selectedAnswer > question.choices.length) {
       throw new AppError('Choose one of the available answers for every question.', 400, 'INVALID_ANSWER');
     }
     const isCorrect = selectedAnswer === question.correctAnswer;
@@ -190,9 +190,13 @@ async function getAssessmentReview(userId, lessonId, attemptId) {
       const hasSnapshot = Boolean(answer.questionText && answer.choices?.length && Number.isInteger(answer.correctAnswer));
       const questionText = answer.questionText || question?.question;
       const choices = hasSnapshot ? answer.choices : question?.choices;
-      const correctAnswerIndex = Number.isInteger(answer.correctAnswer) ? answer.correctAnswer : question?.correctAnswer;
-      const selectedAnswer = choices?.[answer.selectedAnswer] || null;
-      const correctAnswer = choices?.[correctAnswerIndex] || null;
+      const correctAnswerNumber = Number.isInteger(answer.correctAnswer) ? answer.correctAnswer : question?.correctAnswer;
+      const selectedAnswer = Number.isInteger(answer.selectedAnswer) && answer.selectedAnswer >= 1
+        ? choices?.[answer.selectedAnswer - 1] || null
+        : null;
+      const correctAnswer = Number.isInteger(correctAnswerNumber) && correctAnswerNumber >= 1
+        ? choices?.[correctAnswerNumber - 1] || null
+        : null;
       return {
         questionId: String(answer.questionId),
         question: questionText || 'This question is no longer available.',

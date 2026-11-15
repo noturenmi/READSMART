@@ -52,7 +52,7 @@ async function submitReading(lesson) {
   const response = await request(app)
     .post(`/api/lessons/${lesson._id}/assessment`)
     .set({ Authorization: `Bearer ${tokenA}` })
-    .send({ answers: questions.map((question) => ({ questionId: String(question._id), selectedAnswer: 0 })) });
+    .send({ answers: questions.map((question) => ({ questionId: String(question._id), selectedAnswer: 1 })) });
   assert.equal(response.status, 201);
   return response.body.data;
 }
@@ -212,7 +212,7 @@ test('subject progress counts unique reading and writing work across all subject
     const readingResponse = await request(app)
       .post(`/api/lessons/${lesson._id}/assessment`)
       .set({ Authorization: `Bearer ${tokenB}` })
-      .send({ answers: questions.map(({ _id }) => ({ questionId: String(_id), selectedAnswer: 0 })) });
+      .send({ answers: questions.map(({ _id }) => ({ questionId: String(_id), selectedAnswer: 1 })) });
     assert.equal(readingResponse.status, 201);
 
     const activity = await WritingActivity.findOne({ lesson: lesson._id, isPublished: true });

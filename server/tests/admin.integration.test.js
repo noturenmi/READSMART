@@ -65,7 +65,7 @@ const questionContent = {
   question: 'Which statement best explains the central idea in this lesson?',
   questionType: 'key_idea',
   choices: ['The supported central idea', 'An unrelated detail', 'An unsupported claim', 'A different topic'],
-  correctAnswer: 0,
+  correctAnswer: 1,
   explanation: 'This option directly reflects the lesson content and its central idea.',
   points: 1,
   order: 1,
@@ -223,16 +223,22 @@ test('admin creates, edits, and publishes lessons, questions, and writing activi
 
   const invalidType = await asAdmin(request(app).post(`/api/admin/lessons/${lessonId}/questions`).send({ ...questionContent, questionType: 'trivia' }));
   assert.equal(invalidType.status, 400);
-  const invalidAnswer = await asAdmin(request(app).post(`/api/admin/lessons/${lessonId}/questions`).send({ ...questionContent, correctAnswer: 4 }));
-  assert.equal(invalidAnswer.status, 400);
+  for (const correctAnswer of [0, 5, 1.2]) {
+    const invalidAnswer = await asAdmin(request(app).post(`/api/admin/lessons/${lessonId}/questions`).send({ ...questionContent, correctAnswer }));
+    assert.equal(invalidAnswer.status, 400);
+  }
 
   const createdQuestion = await asAdmin(request(app).post(`/api/admin/lessons/${lessonId}/questions`).send(questionContent));
   assert.equal(createdQuestion.status, 201);
   const questionId = createdQuestion.body.data.question.id;
   const publishedQuestion = await asAdmin(request(app).patch(`/api/admin/questions/${questionId}/publish`).send({ isPublished: true }));
   assert.equal(publishedQuestion.status, 200);
-  const updatedQuestion = await asAdmin(request(app).put(`/api/admin/questions/${questionId}`).send({ explanation: 'An updated explanation tied to the lesson content.' }));
+  const updatedQuestion = await asAdmin(request(app).put(`/api/admin/questions/${questionId}`).send({
+    correctAnswer: 4,
+    explanation: 'An updated explanation tied to the lesson content.',
+  }));
   assert.equal(updatedQuestion.status, 200);
+  assert.equal(updatedQuestion.body.data.question.correctAnswer, 4);
   assert.equal(updatedQuestion.body.data.question.isPublished, true, 'Editing a published question does not unpublish it.');
   const studentQuestion = await asStudent(request(app).get(`/api/lessons/${lessonId}/questions`));
   assert.equal(studentQuestion.status, 200);
@@ -256,7 +262,7 @@ test('admin creates, edits, and publishes lessons, questions, and writing activi
   assert.equal(studentWriting.body.data.activity.title, 'Updated writing prompt');
 
   const answer = await asStudent(request(app).post(`/api/lessons/${lessonId}/assessment`).send({
-    answers: [{ questionId, selectedAnswer: 0 }],
+    answers: [{ questionId, selectedAnswer: 1 }],
   }));
   assert.equal(answer.status, 201);
   const response = Array.from({ length: 16 }, (_item, index) => `This lesson idea has a useful example ${index}.`).join(' ');

@@ -57,7 +57,7 @@ async function makeAttempt(user, lesson, questionList, score, submittedAt, { sna
     const isCorrect = correct === question.points;
     return {
       questionId: question._id,
-      selectedAnswer: isCorrect ? question.correctAnswer : (question.correctAnswer + 1) % 4,
+      selectedAnswer: isCorrect ? question.correctAnswer : (question.correctAnswer % 4) + 1,
       isCorrect,
       pointsEarned: correct,
       questionText: `${question.question}${snapshotLabel}`,

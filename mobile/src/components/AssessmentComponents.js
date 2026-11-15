@@ -21,7 +21,7 @@ export function AssessmentButton({ title, onPress, disabled = false, variant = '
   );
 }
 
-export function AssessmentChoice({ label, selected, onPress, index }) {
+export function AssessmentChoice({ label, selected, onPress, choiceNumber }) {
   return (
     <Pressable
       accessibilityRole="radio"
@@ -32,7 +32,7 @@ export function AssessmentChoice({ label, selected, onPress, index }) {
       <View style={[styles.choiceMarker, selected && styles.selectedMarker]}>
         {selected ? <View style={styles.choiceDot} /> : null}
       </View>
-      <Text style={styles.choiceLetter}>{String.fromCharCode(65 + index)}.</Text>
+      <Text style={styles.choiceNumber}>{choiceNumber}.</Text>
       <Text style={styles.choiceText}>{label}</Text>
     </Pressable>
   );
@@ -78,6 +78,6 @@ const styles = StyleSheet.create({
   },
   selectedMarker: { borderColor: colors.green },
   choiceDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.green },
-  choiceLetter: { color: colors.greenDark, fontSize: 14, lineHeight: 21, fontWeight: '700' },
+  choiceNumber: { color: colors.greenDark, fontSize: 14, lineHeight: 21, fontWeight: '700' },
   choiceText: { flex: 1, color: colors.ink, fontSize: 14, lineHeight: 21 },
 });

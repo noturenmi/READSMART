@@ -87,10 +87,10 @@ export function AssessmentScreen({ navigation, route }) {
             {currentQuestion.choices.map((choice, index) => (
               <AssessmentChoice
                 key={`${currentQuestion.id}-${index}`}
-                index={index}
+              choiceNumber={index + 1}
                 label={choice}
-                selected={selections[currentQuestion.id] === index}
-                onPress={() => setSelections((current) => ({ ...current, [currentQuestion.id]: index }))}
+              selected={selections[currentQuestion.id] === index + 1}
+              onPress={() => setSelections((current) => ({ ...current, [currentQuestion.id]: index + 1 }))}
               />
             ))}
           </View>

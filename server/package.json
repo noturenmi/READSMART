@@ -18,6 +18,8 @@
     "import:els": "node seed/importElsContent.js",
     "seed:assessment": "node seed/seedAssessmentData.js",
     "seed:writing": "node seed/seedWritingActivities.js",
+    "migrate:assessment-answer-index": "node scripts/migrateQuestionAnswerIndexes.js",
+    "migrate:assessment-answer-index:one-based": "node scripts/migrateAssessmentAnswerIndexesToOneBased.js",
     "test": "node --test"
   },
   "dependencies": {

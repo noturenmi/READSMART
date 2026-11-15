@@ -54,7 +54,7 @@ async function recordAttempt(user, lesson, { wrongIndexes = [], percentage, subm
     const isCorrect = !wrongIndexes.includes(index);
     return {
       questionId: question._id,
-      selectedAnswer: isCorrect ? 0 : 1,
+      selectedAnswer: isCorrect ? 1 : 2,
       isCorrect,
       pointsEarned: isCorrect ? question.points : 0,
     };
@@ -314,7 +314,7 @@ test('mastered lessons, unpublished lessons, orphan attempts, and incomplete lat
     question: 'This unpublished question must not make a lesson recommendable?',
     questionType: 'key_idea',
     choices: ['Option A', 'Option B', 'Option C', 'Option D'],
-    correctAnswer: 0,
+    correctAnswer: 1,
     explanation: 'The unpublished lesson must be excluded from student recommendations.',
     points: 1,
     order: 1,

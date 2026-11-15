@@ -24,11 +24,11 @@ function validateAssessmentCatalog() {
     questionKeys.add(`${lessonKey}:${question.order}`);
     assert.equal(question.choices.length, 4, `${lessonKey} question ${question.order} must have four choices.`);
     assert.equal(new Set(question.choices).size, 4, `${lessonKey} question ${question.order} choices must be unique.`);
-    assert.ok(Number.isInteger(question.correctAnswer) && question.correctAnswer >= 0 && question.correctAnswer < 4);
+    assert.ok(Number.isInteger(question.correctAnswer) && question.correctAnswer >= 1 && question.correctAnswer <= 4);
     assert.ok(question.question.trim().length >= 10);
     assert.ok(question.explanation.trim().length >= 10);
     assert.ok(questionTypes.includes(question.questionType));
-    assert.ok(question.correctAnswer >= 0 && question.correctAnswer < question.choices.length);
+    assert.ok(question.correctAnswer >= 1 && question.correctAnswer <= question.choices.length);
     assert.equal(question.points, 1);
     assert.equal(question.isPublished, true);
   }
@@ -115,7 +115,7 @@ async function applyAssessmentSeed() {
     const code = lessonKey.split(':')[0];
     counts[code] += 1;
     assert.equal(question.isPublished, true, 'All seeded assessment questions must be published.');
-    assert.equal(question.choices[question.correctAnswer] !== undefined, true);
+    assert.equal(question.choices[question.correctAnswer - 1] !== undefined, true);
     const priorId = existingIds.get(`${question.lesson}:${question.order}`);
     if (priorId) assert.equal(String(question._id), priorId, 'Existing question IDs should remain stable.');
   }

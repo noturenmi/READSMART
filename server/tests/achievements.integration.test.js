@@ -60,7 +60,7 @@ async function submitAssessment(token, lesson, { perfect = true } = {}) {
     .lean();
   const answers = questions.map((question, index) => ({
     questionId: String(question._id),
-    selectedAnswer: !perfect && index === 0 ? (question.correctAnswer + 1) % question.choices.length : question.correctAnswer,
+    selectedAnswer: !perfect && index === 0 ? (question.correctAnswer % question.choices.length) + 1 : question.correctAnswer,
   }));
   return request(app)
     .post(`/api/lessons/${lesson._id}/assessment`)
@@ -205,7 +205,7 @@ test('incomplete and orphaned assessment or writing records do not produce badge
     lesson: lesson._id,
     answers: questions.slice(0, 4).map((question) => ({
       questionId: question._id,
-      selectedAnswer: 0,
+      selectedAnswer: 1,
       isCorrect: false,
       pointsEarned: 0,
     })),
@@ -218,7 +218,7 @@ test('incomplete and orphaned assessment or writing records do not produce badge
   await AssessmentAttempt.create({
     user: student.user._id,
     lesson: orphanLessonId,
-    answers: questions.map((question) => ({ questionId: question._id, selectedAnswer: 0, isCorrect: false, pointsEarned: 0 })),
+    answers: questions.map((question) => ({ questionId: question._id, selectedAnswer: 1, isCorrect: false, pointsEarned: 0 })),
     score: 0,
     totalItems: questions.length,
     totalPoints: questions.length,

@@ -90,8 +90,9 @@ test('assessment seed creates five balanced questions per published lesson idemp
     const lessons = await Lesson.find({ subject: subject._id }).select('_id').lean();
     assert.equal(lessons.length, 10);
     for (const lesson of lessons) {
-      const questions = await ReadingQuestion.find({ lesson: lesson._id }).sort({ order: 1 }).lean();
+      const questions = await ReadingQuestion.find({ lesson: lesson._id }).select('+correctAnswer').sort({ order: 1 }).lean();
       assert.equal(questions.length, 5);
+      assert.ok(questions.every(({ correctAnswer }) => Number.isInteger(correctAnswer) && correctAnswer >= 1 && correctAnswer <= 4));
       assert.deepEqual(questions.map(({ questionType }) => questionType), [
         'key_idea', 'vocabulary', 'inference', 'interpretation', 'evaluation',
       ]);
@@ -113,7 +114,7 @@ test('student retrieves only published questions for a lesson without correct an
     question: 'Draft-only question for the published filter check?',
     questionType: 'key_idea',
     choices: ['First option', 'Second option', 'Third option', 'Fourth option'],
-    correctAnswer: 0,
+    correctAnswer: 1,
     explanation: 'This draft must not be visible to students.',
     points: 1,
     order: 6,
@@ -148,7 +149,7 @@ test('submission is server-scored, saved, and attempt history is private to the 
     .lean();
   const answers = questions.map((question, index) => ({
     questionId: String(question._id),
-    selectedAnswer: index < 3 ? question.correctAnswer : (question.correctAnswer + 1) % 4,
+    selectedAnswer: index < 3 ? question.correctAnswer : (question.correctAnswer % 4) + 1,
   }));
 
   const unauthenticated = await request(app).post(`/api/lessons/${lesson.id}/assessment`).send({ answers });
@@ -201,6 +202,7 @@ test('submission is server-scored, saved, and attempt history is private to the 
   assert.equal(attemptResponseA.body.data.attempts.length, 1);
   assert.equal(attemptResponseB.body.data.attempts.length, 1);
   assert.equal(attemptResponseA.body.data.attempts[0].id, result.attemptId);
+  assert.equal(attemptResponseA.body.data.attempts[0].answers[0].selectedAnswer, answers[0].selectedAnswer);
   assert.notEqual(attemptResponseA.body.data.attempts[0].id, studentBSubmit.body.data.attemptId);
   assert.equal(Object.hasOwn(attemptResponseA.body.data.attempts[0].answers[0], 'correctAnswer'), false);
   assert.equal(Object.hasOwn(attemptResponseA.body.data.attempts[0].answers[0], 'choices'), false);
@@ -214,13 +216,17 @@ test('assessment submission rejects missing, invalid, duplicate, and foreign que
   const otherLesson = await Lesson.findOne({ subject: mil._id, lessonNumber: 2 });
   const questions = await ReadingQuestion.find({ lesson: lesson._id }).sort({ order: 1 }).lean();
   const otherQuestion = await ReadingQuestion.findOne({ lesson: otherLesson._id });
-  const complete = questions.map(({ _id }) => ({ questionId: String(_id), selectedAnswer: 0 }));
+  const complete = questions.map(({ _id }) => ({ questionId: String(_id), selectedAnswer: 1 }));
 
   const missing = await request(app).post(`/api/lessons/${lesson.id}/assessment`).set(auth).send({ answers: complete.slice(0, 4) });
   assert.equal(missing.status, 400);
   assert.equal(missing.body.error.code, 'MISSING_ANSWERS');
-  const invalidChoice = await request(app).post(`/api/lessons/${lesson.id}/assessment`).set(auth).send({ answers: complete.map((answer, index) => index === 0 ? { ...answer, selectedAnswer: 4 } : answer) });
-  assert.equal(invalidChoice.status, 400);
+  for (const invalidAnswer of [0, 5, -1, 1.5, '1']) {
+    const invalidChoice = await request(app).post(`/api/lessons/${lesson.id}/assessment`).set(auth).send({
+      answers: complete.map((answer, index) => index === 0 ? { ...answer, selectedAnswer: invalidAnswer } : answer),
+    });
+    assert.equal(invalidChoice.status, 400, `Answer index ${String(invalidAnswer)} must be rejected.`);
+  }
   const duplicate = await request(app).post(`/api/lessons/${lesson.id}/assessment`).set(auth).send({ answers: complete.map((answer, index) => index === 1 ? { ...answer, questionId: complete[0].questionId } : answer) });
   assert.equal(duplicate.status, 400);
   assert.equal(duplicate.body.error.code, 'DUPLICATE_QUESTION');
@@ -242,7 +248,7 @@ test('student can review incorrect answers from their completed attempt without 
     .lean();
   const answers = questions.map((question, index) => ({
     questionId: String(question._id),
-    selectedAnswer: index === 1 ? (question.correctAnswer + 1) % 4 : question.correctAnswer,
+    selectedAnswer: index === 1 ? (question.correctAnswer % 4) + 1 : question.correctAnswer,
   }));
   const submitted = await request(app)
     .post(`/api/lessons/${lesson.id}/assessment`)
@@ -278,15 +284,15 @@ test('student can review incorrect answers from their completed attempt without 
   const incorrect = review.body.data.incorrectAnswers[0];
   const sourceQuestion = questions.find(({ _id }) => String(_id) === incorrect.questionId);
   assert.equal(incorrect.question, sourceQuestion.question);
-  assert.equal(incorrect.yourAnswer, sourceQuestion.choices[answers[1].selectedAnswer]);
-  assert.equal(incorrect.correctAnswer, sourceQuestion.choices[sourceQuestion.correctAnswer]);
+  assert.equal(incorrect.yourAnswer, sourceQuestion.choices[answers[1].selectedAnswer - 1]);
+  assert.equal(incorrect.correctAnswer, sourceQuestion.choices[sourceQuestion.correctAnswer - 1]);
   assert.equal(incorrect.explanation, sourceQuestion.explanation);
   await ReadingQuestion.deleteOne({ _id: sourceQuestion._id });
   try {
     const afterDeletion = await request(app).get(reviewPath).set({ Authorization: `Bearer ${tokenA}` });
     assert.equal(afterDeletion.status, 200);
     assert.equal(afterDeletion.body.data.incorrectAnswers[0].question, sourceQuestion.question);
-    assert.equal(afterDeletion.body.data.incorrectAnswers[0].correctAnswer, sourceQuestion.choices[sourceQuestion.correctAnswer]);
+    assert.equal(afterDeletion.body.data.incorrectAnswers[0].correctAnswer, sourceQuestion.choices[sourceQuestion.correctAnswer - 1]);
     assert.equal(afterDeletion.body.data.incorrectAnswers[0].questionAvailable, true);
   } finally {
     await ReadingQuestion.create(sourceQuestion);
@@ -316,7 +322,7 @@ test('all-correct attempts return a positive review state and deleted question r
   const orphanAttempt = await AssessmentAttempt.create({
     user: studentA._id,
     lesson: lesson._id,
-    answers: [{ questionId: missingQuestionId, selectedAnswer: 0, isCorrect: false, pointsEarned: 0 }],
+    answers: [{ questionId: missingQuestionId, selectedAnswer: 1, isCorrect: false, pointsEarned: 0 }],
     score: 0,
     totalItems: 1,
     totalPoints: 1,
@@ -333,5 +339,30 @@ test('all-correct attempts return a positive review state and deleted question r
     assert.equal(orphanReview.body.data.incorrectAnswers[0].correctAnswer, null);
   } finally {
     await AssessmentAttempt.deleteOne({ _id: orphanAttempt._id });
+  }
+});
+
+test('each submitted choice number from 1 through 4 is scored against the same 1-based answer key', async () => {
+  const subject = await Subject.findOne({ code: 'MIL' });
+  const lesson = await Lesson.findOne({ subject: subject._id, lessonNumber: 3 });
+  const questions = await ReadingQuestion.find({ lesson: lesson._id, isPublished: true })
+    .select('+correctAnswer').sort({ order: 1 }).lean();
+  const target = questions[0];
+
+  for (const selectedAnswer of [1, 2, 3, 4]) {
+    const answers = questions.map((question) => ({
+      questionId: String(question._id),
+      selectedAnswer: question._id.equals(target._id) ? selectedAnswer : question.correctAnswer,
+    }));
+    const response = await request(app).post(`/api/lessons/${lesson.id}/assessment`)
+      .set({ Authorization: `Bearer ${tokenA}` }).send({ answers });
+    assert.equal(response.status, 201);
+    const isCorrect = selectedAnswer === target.correctAnswer;
+    assert.equal(response.body.data.answers[0].selectedAnswer, selectedAnswer);
+    assert.equal(response.body.data.answers[0].isCorrect, isCorrect);
+    assert.equal(response.body.data.score, isCorrect ? 5 : 4);
+    const stored = await AssessmentAttempt.findById(response.body.data.attemptId).select('+answers.correctAnswer').lean();
+    assert.equal(stored.answers[0].selectedAnswer, selectedAnswer);
+    assert.equal(stored.answers[0].correctAnswer, target.correctAnswer);
   }
 });
