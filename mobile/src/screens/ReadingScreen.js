@@ -32,6 +32,22 @@ export function ReadingScreen({ navigation, route }) {
         subtitle={flow.librarySubtitle}
         eyebrow={flow.libraryEyebrow}
       />
+      {flow.key !== 'writing' ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => navigation.navigate('SavedLessons')}
+          style={({ pressed }) => pressed && styles.pressed}
+        >
+          <Card style={styles.historyCard}>
+            <View style={styles.historyIcon}><Ionicons name="bookmark-outline" size={20} color={colors.greenDark} /></View>
+            <View style={styles.historyCopy}>
+              <Text style={styles.historyTitle}>Saved Lessons</Text>
+              <Text style={styles.historySubtitle}>Open the lessons you have bookmarked</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+          </Card>
+        </Pressable>
+      ) : null}
       {flow.key === 'writing' ? (
         <Pressable
           accessibilityRole="button"

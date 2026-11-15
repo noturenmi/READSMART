@@ -8,6 +8,7 @@ import { AssessmentResultScreen } from '../screens/AssessmentResultScreen';
 import { AssessmentReviewScreen } from '../screens/AssessmentReviewScreen';
 import { WritingActivityScreen } from '../screens/WritingActivityScreen';
 import { WritingResultScreen } from '../screens/WritingResultScreen';
+import { SavedLessonsScreen } from '../screens/SavedLessonsScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -15,6 +16,7 @@ export function ReadingNavigator() {
   return (
     <Stack.Navigator initialRouteName="Subjects" screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Subjects" component={ReadingScreen} />
+      <Stack.Screen name="SavedLessons" component={SavedLessonsScreen} />
       <Stack.Screen name="Lessons" component={ReadingLessonsScreen} />
       <Stack.Screen name="Lesson" component={LessonDetailScreen} />
       <Stack.Screen name="Assessment" component={AssessmentScreen} />

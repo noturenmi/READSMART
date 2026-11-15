@@ -110,6 +110,19 @@ export const api = {
   getLesson(lessonId) {
     return request(`/lessons/${encodeURIComponent(lessonId)}`, { authenticated: true });
   },
+  getSavedLessons(subjectId) {
+    const query = subjectId ? `?subjectId=${encodeURIComponent(subjectId)}` : '';
+    return request(`/bookmarks${query}`, { authenticated: true });
+  },
+  getLessonBookmark(lessonId) {
+    return request(`/bookmarks/${encodeURIComponent(lessonId)}`, { authenticated: true });
+  },
+  bookmarkLesson(lessonId) {
+    return request(`/bookmarks/${encodeURIComponent(lessonId)}`, { method: 'PUT', authenticated: true });
+  },
+  removeLessonBookmark(lessonId) {
+    return request(`/bookmarks/${encodeURIComponent(lessonId)}`, { method: 'DELETE', authenticated: true });
+  },
   getLessonSummary(lessonId) {
     return request(`/lessons/${encodeURIComponent(lessonId)}/summary`, {
       method: 'POST',

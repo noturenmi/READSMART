@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { AssessmentButton } from '../components/AssessmentComponents';
 import { Card, Screen } from '../components/Screen';
-import { ContentSection, ReadingHeader, ReadingParagraph, ReadingState } from '../components/ReadingComponents';
+import { BookmarkButton, ContentSection, ReadingHeader, ReadingParagraph, ReadingState } from '../components/ReadingComponents';
 import { api } from '../services/api';
 import { colors } from '../theme';
 
@@ -15,6 +15,12 @@ export function LessonDetailScreen({ navigation, route }) {
   const [summary, setSummary] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState('');
+  const [bookmarked, setBookmarked] = useState(false);
+  const [bookmarkStatusLoading, setBookmarkStatusLoading] = useState(true);
+  const [bookmarkStatusError, setBookmarkStatusError] = useState(false);
+  const [bookmarkActionError, setBookmarkActionError] = useState(false);
+  const [bookmarkSaving, setBookmarkSaving] = useState(false);
+  const [bookmarkAttempt, setBookmarkAttempt] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -26,6 +32,17 @@ export function LessonDetailScreen({ navigation, route }) {
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [attempt, lessonId]);
+
+  useEffect(() => {
+    let active = true;
+    setBookmarkStatusLoading(true);
+    setBookmarkStatusError(false);
+    api.getLessonBookmark(lessonId)
+      .then((result) => { if (active) setBookmarked(result.isBookmarked); })
+      .catch(() => { if (active) setBookmarkStatusError(true); })
+      .finally(() => { if (active) setBookmarkStatusLoading(false); });
+    return () => { active = false; };
+  }, [bookmarkAttempt, lessonId]);
 
   async function generateSummary() {
     setSummaryLoading(true);
@@ -40,6 +57,23 @@ export function LessonDetailScreen({ navigation, route }) {
     }
   }
 
+  async function toggleBookmark() {
+    if (bookmarkSaving || bookmarkStatusLoading || bookmarkStatusError) return;
+    const wasBookmarked = bookmarked;
+    setBookmarked(!wasBookmarked);
+    setBookmarkActionError(false);
+    setBookmarkSaving(true);
+    try {
+      if (wasBookmarked) await api.removeLessonBookmark(lessonId);
+      else await api.bookmarkLesson(lessonId);
+    } catch {
+      setBookmarked(wasBookmarked);
+      setBookmarkActionError(true);
+    } finally {
+      setBookmarkSaving(false);
+    }
+  }
+
   return (
     <Screen>
       <ReadingHeader
@@ -48,6 +82,23 @@ export function LessonDetailScreen({ navigation, route }) {
         eyebrow={lesson ? `LESSON ${lesson.lessonNumber}` : 'READING'}
         onBack={() => navigation.goBack()}
       />
+      {!loading && !failed && lesson ? (
+        <View style={styles.bookmarkArea}>
+          <BookmarkButton
+            isBookmarked={bookmarked}
+            loading={bookmarkStatusLoading || bookmarkSaving}
+            disabled={bookmarkStatusError}
+            onPress={toggleBookmark}
+            showLabel
+          />
+          {bookmarkStatusError ? (
+            <ReadingState kind="error" title="Unable to check saved status." message="Retry to check whether this lesson is bookmarked." onRetry={() => setBookmarkAttempt((value) => value + 1)} />
+          ) : null}
+          {bookmarkActionError ? (
+            <Text accessibilityRole="alert" style={styles.bookmarkError}>Could not update the bookmark. Your previous saved state was restored. Try again.</Text>
+          ) : null}
+        </View>
+      ) : null}
       {loading ? <ReadingState kind="loading" title="Loading lesson..." /> : null}
       {!loading && failed ? (
         <ReadingState kind="error" title="Unable to load this lesson." message="Please check your connection and try again." onRetry={() => setAttempt((value) => value + 1)} />
@@ -135,3 +186,8 @@ export function LessonDetailScreen({ navigation, route }) {
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  bookmarkArea: { gap: 8, alignItems: 'flex-start' },
+  bookmarkError: { color: '#9B4A3E', fontSize: 12, lineHeight: 18 },
+});

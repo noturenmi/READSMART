@@ -54,18 +54,55 @@ export function SubjectCard({ subject, onPress }) {
   );
 }
 
-export function LessonCard({ lesson, onPress }) {
+export function LessonCard({ lesson, onPress, isBookmarked = false, bookmarkLoading = false, onToggleBookmark }) {
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => pressed && styles.pressed}>
-      <Card style={styles.lessonCard}>
-        <View style={styles.lessonNumber}><Text style={styles.lessonNumberText}>{lesson.lessonNumber}</Text></View>
-        <View style={styles.cardCopy}>
-          <Text style={styles.lessonLabel}>LESSON {lesson.lessonNumber}</Text>
-          <Text style={styles.lessonTitle}>{lesson.title}</Text>
-          {lesson.overview ? <Text style={styles.description}>{lesson.overview}</Text> : null}
-        </View>
-        <Ionicons name="chevron-forward" size={19} color={colors.muted} />
-      </Card>
+    <Card style={styles.lessonCard}>
+      <View style={styles.lessonCardRow}>
+        <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.lessonCardMain, pressed && styles.pressed]}>
+          <View style={styles.lessonNumber}><Text style={styles.lessonNumberText}>{lesson.lessonNumber}</Text></View>
+          <View style={styles.cardCopy}>
+            {lesson.subject && typeof lesson.subject === 'object' ? (
+              <Text style={styles.lessonSubject}>{lesson.subject.code} · {lesson.subject.name}</Text>
+            ) : null}
+            <Text style={styles.lessonLabel}>LESSON {lesson.lessonNumber}</Text>
+            <Text style={styles.lessonTitle}>{lesson.title}</Text>
+            {lesson.overview ? <Text style={styles.description}>{lesson.overview}</Text> : null}
+          </View>
+          {!onToggleBookmark ? <Ionicons name="chevron-forward" size={19} color={colors.muted} /> : null}
+        </Pressable>
+        {onToggleBookmark ? (
+          <BookmarkButton
+            isBookmarked={isBookmarked}
+            loading={bookmarkLoading}
+            onPress={onToggleBookmark}
+          />
+        ) : null}
+      </View>
+    </Card>
+  );
+}
+
+export function BookmarkButton({ isBookmarked, loading = false, disabled = false, onPress, showLabel = false }) {
+  const label = loading ? 'Saving…' : (isBookmarked ? 'Saved' : 'Save lesson');
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={loading ? 'Updating lesson bookmark' : (isBookmarked ? 'Remove lesson bookmark' : 'Bookmark lesson')}
+      accessibilityState={{ selected: isBookmarked, disabled: disabled || loading }}
+      disabled={disabled || loading}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.bookmarkButton,
+        showLabel && styles.bookmarkButtonLabeled,
+        isBookmarked && styles.bookmarkButtonSaved,
+        (disabled || loading) && styles.bookmarkButtonDisabled,
+        pressed && styles.pressed,
+      ]}
+    >
+      {loading
+        ? <ActivityIndicator color={colors.green} size="small" />
+        : <Ionicons name={isBookmarked ? 'bookmark' : 'bookmark-outline'} size={19} color={colors.greenDark} />}
+      {showLabel ? <Text style={styles.bookmarkButtonText}>{label}</Text> : null}
     </Pressable>
   );
 }
@@ -118,10 +155,18 @@ const styles = StyleSheet.create({
   description: { color: colors.muted, fontSize: 12, lineHeight: 18, marginTop: 5 },
   meta: { color: colors.muted, fontSize: 11, lineHeight: 16, marginTop: 5 },
   lessonCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
+  lessonCardRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  lessonCardMain: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 12 },
   lessonNumber: { width: 38, height: 38, borderRadius: 13, backgroundColor: colors.greenLight, alignItems: 'center', justifyContent: 'center' },
   lessonNumberText: { color: colors.greenDark, fontSize: 15, fontWeight: '800' },
   lessonLabel: { color: colors.green, fontSize: 9, fontWeight: '800', letterSpacing: 0.8 },
+  lessonSubject: { color: colors.muted, fontSize: 10, lineHeight: 15, fontWeight: '700', marginBottom: 2 },
   lessonTitle: { color: colors.ink, fontSize: 13, lineHeight: 19, fontWeight: '700', marginTop: 3 },
+  bookmarkButton: { minWidth: 42, height: 42, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 9, flexDirection: 'row', gap: 7 },
+  bookmarkButtonLabeled: { minWidth: 0, paddingHorizontal: 13 },
+  bookmarkButtonSaved: { backgroundColor: colors.greenLight, borderColor: '#D8E8DC' },
+  bookmarkButtonDisabled: { opacity: 0.6 },
+  bookmarkButtonText: { color: colors.greenDark, fontSize: 12, fontWeight: '800' },
   pressed: { opacity: 0.78 },
   state: { alignItems: 'center', paddingVertical: 24, paddingHorizontal: 20 },
   stateTitle: { color: colors.ink, textAlign: 'center', fontSize: 15, fontWeight: '700', marginTop: 12 },
