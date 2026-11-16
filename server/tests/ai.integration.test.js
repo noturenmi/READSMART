@@ -117,11 +117,14 @@ test('AI endpoints require authentication and validate lesson/submission IDs', a
   const summaryPath = `/api/lessons/${lessonOne.id}/summary`;
   const feedbackPath = `/api/lessons/${lessonOne.id}/writing/${new mongoose.Types.ObjectId()}/ai-feedback`;
   assert.equal((await request(app).post(summaryPath).send({})).status, 401);
+  assert.equal((await request(app).get(summaryPath)).status, 401);
   assert.equal((await request(app).post(feedbackPath).send({})).status, 401);
   assert.equal((await request(app).post('/api/lessons/not-an-id/summary').set({ Authorization: `Bearer ${tokenA}` }).send({})).status, 400);
+  assert.equal((await request(app).get('/api/lessons/not-an-id/summary').set({ Authorization: `Bearer ${tokenA}` })).status, 400);
   assert.equal((await request(app).post(`/api/lessons/${lessonOne.id}/writing/not-an-id/ai-feedback`).set({ Authorization: `Bearer ${tokenA}` }).send({})).status, 400);
   assert.equal((await request(app).post(`/api/lessons/${new mongoose.Types.ObjectId()}/summary`).set({ Authorization: `Bearer ${tokenA}` }).send({})).status, 404);
   assert.equal((await request(app).post(summaryPath).set({ Authorization: `Bearer ${tokenA}` }).send({ lessonContent: 'client content' })).status, 400);
+  assert.equal((await request(app).post(summaryPath).set({ Authorization: `Bearer ${tokenA}` }).send({ regenerate: 'yes' })).status, 400);
 });
 
 test('authenticated students receive a cached summary generated from published lesson content only', async () => {
@@ -171,9 +174,79 @@ test('authenticated students receive a cached summary generated from published l
   try {
     const unpublished = await request(app).post(`/api/lessons/${lessonTwo.id}/summary`).set({ Authorization: `Bearer ${tokenA}` }).send({});
     assert.equal(unpublished.status, 404);
+    const unpublishedCache = await request(app).get(`/api/lessons/${lessonTwo.id}/summary`).set({ Authorization: `Bearer ${tokenA}` });
+    assert.equal(unpublishedCache.status, 404);
   } finally {
     await Lesson.updateOne({ _id: lessonTwo._id }, { $set: { isPublished: true } });
   }
+});
+
+test('cached summary lookup returns saved content without invoking Ollama, and missing cache stays read-only', async () => {
+  await LessonSummary.deleteOne({ lesson: lessonOne._id });
+  let calls = 0;
+  global.fetch = async () => {
+    calls += 1;
+    return ollamaFetch(summaryOutput)('', {});
+  };
+
+  const app = createApp({ ...baseConfig, ai: configured });
+  const endpoint = `/api/lessons/${lessonOne.id}/summary`;
+  const emptyLookup = await request(app).get(endpoint).set({ Authorization: `Bearer ${tokenA}` });
+  assert.equal(emptyLookup.status, 200);
+  assert.equal(emptyLookup.body.data.summary, null);
+  assert.equal(calls, 0);
+  assert.equal(await LessonSummary.countDocuments({ lesson: lessonOne._id }), 0);
+
+  const generated = await request(app).post(endpoint).set({ Authorization: `Bearer ${tokenA}` }).send({});
+  assert.equal(generated.status, 200, JSON.stringify(generated.body));
+  assert.equal(generated.body.data.cached, false);
+  assert.equal(calls, 1);
+
+  const cachedLookup = await request(app).get(endpoint).set({ Authorization: `Bearer ${tokenA}` });
+  assert.equal(cachedLookup.status, 200);
+  assert.deepEqual(cachedLookup.body.data.summary, summaryOutput);
+  assert.equal(cachedLookup.body.data.cached, true);
+  assert.equal(calls, 1);
+  assert.equal(await LessonSummary.countDocuments({ lesson: lessonOne._id }), 1);
+});
+
+test('explicit summary regeneration bypasses cache, updates one record, and failed generation preserves it', async () => {
+  const app = createApp({ ...baseConfig, ai: configured });
+  const endpoint = `/api/lessons/${lessonOne.id}/summary`;
+  const before = await LessonSummary.findOne({ lesson: lessonOne._id }).lean();
+  assert.ok(before);
+  const regeneratedOutput = {
+    ...summaryOutput,
+    mainIdea: 'Careful source evaluation supports informed decisions.',
+    takeaway: 'Evaluate sources before relying on their claims.',
+  };
+  let calls = 0;
+  global.fetch = async (url, options) => {
+    calls += 1;
+    const body = JSON.parse(options.body);
+    assert.equal(body.think, false);
+    return ollamaFetch(regeneratedOutput)(url, options);
+  };
+
+  const regenerated = await request(app).post(endpoint).set({ Authorization: `Bearer ${tokenA}` }).send({ regenerate: true });
+  assert.equal(regenerated.status, 200, JSON.stringify(regenerated.body));
+  assert.deepEqual(regenerated.body.data.summary, regeneratedOutput);
+  assert.equal(regenerated.body.data.cached, false);
+  assert.equal(calls, 1);
+
+  const afterSuccess = await LessonSummary.findOne({ lesson: lessonOne._id }).lean();
+  assert.equal(String(afterSuccess._id), String(before._id));
+  assert.deepEqual(afterSuccess.summary, regeneratedOutput);
+  assert.equal(await LessonSummary.countDocuments({ lesson: lessonOne._id }), 1);
+
+  global.fetch = async () => ({ ok: false, status: 500, async json() { return { error: { message: 'provider failure' } }; } });
+  const failedRegeneration = await request(app).post(endpoint).set({ Authorization: `Bearer ${tokenA}` }).send({ regenerate: true });
+  assert.equal(failedRegeneration.status, 503);
+  assert.equal(failedRegeneration.body.error.code, 'AI_SUMMARY_UNAVAILABLE');
+  const afterFailure = await LessonSummary.findOne({ lesson: lessonOne._id }).lean();
+  assert.equal(String(afterFailure._id), String(before._id));
+  assert.deepEqual(afterFailure.summary, regeneratedOutput);
+  assert.equal(await LessonSummary.countDocuments({ lesson: lessonOne._id }), 1);
 });
 
 test('a lesson with no source text is rejected without calling Ollama', async () => {

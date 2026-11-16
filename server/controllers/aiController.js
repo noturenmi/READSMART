@@ -10,7 +10,9 @@ const aiFeedbackService = require('../services/aiFeedbackService');
 
 const objectId = /^[a-f\d]{24}$/i;
 const emptyBodySchema = z.object({}).strict().optional().default({});
+const summaryBodySchema = z.object({ regenerate: z.boolean().optional() }).strict().optional().default({});
 const validateEmptyBody = validateBody(emptyBodySchema);
+const validateSummaryBody = validateBody(summaryBodySchema);
 
 function validateObjectId(value, label) {
   if (!objectId.test(value) || !mongoose.Types.ObjectId.isValid(value)) {
@@ -23,7 +25,15 @@ function createAIController(config) {
 
   const getSummary = asyncHandler(async (req, res) => {
     validateObjectId(req.params.lessonId, 'lesson');
-    const result = await lessonSummaryService.generateLessonSummary(req.params.lessonId, aiService);
+    const result = await lessonSummaryService.generateLessonSummary(req.params.lessonId, aiService, {
+      regenerate: req.validatedBody?.regenerate === true,
+    });
+    return sendSuccess(res, 200, result);
+  });
+
+  const getCachedSummary = asyncHandler(async (req, res) => {
+    validateObjectId(req.params.lessonId, 'lesson');
+    const result = await lessonSummaryService.getCachedLessonSummary(req.params.lessonId, aiService);
     return sendSuccess(res, 200, result);
   });
 
@@ -41,8 +51,10 @@ function createAIController(config) {
 
   return {
     getSummary,
+    getCachedSummary,
     getWritingFeedback,
     validateEmptyBody,
+    validateSummaryBody,
   };
 }
 

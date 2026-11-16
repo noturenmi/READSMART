@@ -123,10 +123,13 @@ export const api = {
   removeLessonBookmark(lessonId) {
     return request(`/bookmarks/${encodeURIComponent(lessonId)}`, { method: 'DELETE', authenticated: true });
   },
-  getLessonSummary(lessonId) {
+  getCachedLessonSummary(lessonId) {
+    return request(`/lessons/${encodeURIComponent(lessonId)}/summary`, { authenticated: true });
+  },
+  getLessonSummary(lessonId, { regenerate = false } = {}) {
     return request(`/lessons/${encodeURIComponent(lessonId)}/summary`, {
       method: 'POST',
-      body: {},
+      body: regenerate ? { regenerate: true } : {},
       authenticated: true,
       timeoutMs: 105000,
       timeoutMessage: 'The local AI request took too long. Please try again; the original lesson is still available.',

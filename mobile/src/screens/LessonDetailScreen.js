@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { AssessmentButton } from '../components/AssessmentComponents';
 import { Card, Screen } from '../components/Screen';
@@ -13,8 +13,10 @@ export function LessonDetailScreen({ navigation, route }) {
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [summary, setSummary] = useState(null);
+  const [summaryCacheLoading, setSummaryCacheLoading] = useState(true);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState('');
+  const summaryRequestInFlight = useRef(false);
   const [bookmarked, setBookmarked] = useState(false);
   const [bookmarkStatusLoading, setBookmarkStatusLoading] = useState(true);
   const [bookmarkStatusError, setBookmarkStatusError] = useState(false);
@@ -35,6 +37,20 @@ export function LessonDetailScreen({ navigation, route }) {
 
   useEffect(() => {
     let active = true;
+    setSummary(null);
+    setSummaryError('');
+    setSummaryCacheLoading(true);
+    api.getCachedLessonSummary(lessonId)
+      .then((result) => { if (active) setSummary(result.summary); })
+      .catch((error) => {
+        if (active) setSummaryError(error.message || 'Unable to check for a saved summary. You can still try generating one.');
+      })
+      .finally(() => { if (active) setSummaryCacheLoading(false); });
+    return () => { active = false; };
+  }, [lessonId]);
+
+  useEffect(() => {
+    let active = true;
     setBookmarkStatusLoading(true);
     setBookmarkStatusError(false);
     api.getLessonBookmark(lessonId)
@@ -44,17 +60,28 @@ export function LessonDetailScreen({ navigation, route }) {
     return () => { active = false; };
   }, [bookmarkAttempt, lessonId]);
 
-  async function generateSummary() {
+  async function requestSummary(regenerate) {
+    if (summaryRequestInFlight.current || summaryCacheLoading || (regenerate && !summary) || (!regenerate && summary)) return;
+    summaryRequestInFlight.current = true;
     setSummaryLoading(true);
     setSummaryError('');
     try {
-      const result = await api.getLessonSummary(lessonId);
+      const result = await api.getLessonSummary(lessonId, { regenerate });
       setSummary(result.summary);
     } catch (error) {
       setSummaryError(error.message || 'The AI summary is currently unavailable. You can continue reading the original lesson.');
     } finally {
+      summaryRequestInFlight.current = false;
       setSummaryLoading(false);
     }
+  }
+
+  function generateSummary() {
+    return requestSummary(false);
+  }
+
+  function regenerateSummary() {
+    return requestSummary(true);
   }
 
   async function toggleBookmark() {
@@ -125,11 +152,18 @@ export function LessonDetailScreen({ navigation, route }) {
               <ReadingState kind="empty" title="Lesson content is being prepared." message="Please check back later." />
             ) : null}
           </View>
-          <AssessmentButton
-            title={summaryLoading ? 'Generating Summary…' : (summary ? 'Refresh AI-Assisted Summary' : 'Generate Summary')}
-            disabled={summaryLoading}
-            onPress={generateSummary}
-          />
+          {summaryCacheLoading ? (
+            <Card style={{ alignItems: 'center', gap: 10 }}>
+              <ActivityIndicator color={colors.green} />
+              <Text style={{ color: colors.muted, fontSize: 13 }}>Checking for a saved summary…</Text>
+            </Card>
+          ) : (
+            <AssessmentButton
+              title={summaryLoading ? 'Generating Summary…' : (summary ? 'Regenerate Summary' : 'Generate Summary')}
+              disabled={summaryLoading}
+              onPress={summary ? regenerateSummary : generateSummary}
+            />
+          )}
           {summaryLoading ? (
             <Card style={{ alignItems: 'center', gap: 10 }}>
               <ActivityIndicator color={colors.green} />

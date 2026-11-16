@@ -17,7 +17,8 @@ function createLessonRoutes(config) {
   router.get('/:lessonId/writing', writingController.getActivity);
   router.post('/:lessonId/writing', authorizeRole('student'), writingController.validateSubmission, writingController.submitActivity);
   router.get('/:lessonId/writing-submissions', authorizeRole('student'), writingController.getSubmissions);
-  router.post('/:lessonId/summary', aiController.validateEmptyBody, aiController.getSummary);
+  router.get('/:lessonId/summary', aiController.getCachedSummary);
+  router.post('/:lessonId/summary', aiController.validateSummaryBody, aiController.getSummary);
   router.post('/:lessonId/writing/:submissionId/ai-feedback', authorizeRole('student'), aiController.validateEmptyBody, aiController.getWritingFeedback);
   router.get('/:lessonId', controller.getLesson);
   return router;
