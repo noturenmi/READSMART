@@ -34,13 +34,8 @@ export function WritingResultScreen({ navigation, route }) {
     }
   }
 
-  function backToLesson() {
-    const tabs = navigation.getParent();
-    if (tabs) {
-      tabs.navigate('Reading', { screen: 'Lesson', params: { lessonId } });
-    } else if (navigation.canGoBack()) {
-      navigation.goBack();
-    }
+  function goBackToPreviousScreen() {
+    if (navigation.canGoBack()) navigation.goBack();
   }
 
   return (
@@ -110,7 +105,7 @@ export function WritingResultScreen({ navigation, route }) {
           ) : null}
         </>
       ) : null}
-      <AssessmentButton title="Back to Lesson" onPress={backToLesson} />
+      <AssessmentButton title="Back" onPress={goBackToPreviousScreen} />
       <AssessmentButton
         title="Try Again"
         variant="secondary"
