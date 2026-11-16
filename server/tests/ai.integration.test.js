@@ -27,16 +27,17 @@ const baseConfig = {
   corsOrigins: [],
 };
 const configured = {
-  apiKey: 'test-provider-key',
-  apiUrl: 'https://provider.example/v1/chat/completions',
-  model: 'test-model',
+  provider: 'ollama',
+  ollamaBaseUrl: 'http://127.0.0.1:11434',
+  model: 'test-installed-model',
+  numCtx: 4096,
   timeoutMs: 1000,
 };
 const summaryOutput = {
-  mainIdea: 'The lesson explains how readers can understand the topic using its central ideas.',
-  importantIdeas: ['The lesson introduces essential ideas.', 'Examples help connect the ideas to learning.'],
-  importantConcepts: [{ term: 'Central idea', explanation: 'The main point developed by a lesson.' }],
-  takeaway: 'Use the lesson’s main ideas to guide your understanding.',
+  mainIdea: 'Media and information literacy helps readers use information responsibly.',
+  importantIdeas: ['Readers encounter information through different media.', 'Source and purpose affect how information is understood.'],
+  importantConcepts: [{ term: 'Credibility', explanation: 'A source’s trustworthiness.' }],
+  takeaway: 'Check information before using or sharing it.',
 };
 const feedbackOutput = {
   strengths: ['You explain the topic in your own words.'],
@@ -63,14 +64,14 @@ function tokenFor(user) {
   });
 }
 
-function providerFetch(output, { status = 200 } = {}) {
+function ollamaFetch(output, { status = 200 } = {}) {
   return async (_url, options) => ({
     ok: status >= 200 && status < 300,
     status,
     requestOptions: options,
     async json() {
       return status >= 200 && status < 300
-        ? { choices: [{ message: { content: JSON.stringify(output) } }] }
+        ? { message: { content: JSON.stringify(output) } }
         : { error: { message: 'provider failure' } };
     },
   });
@@ -127,22 +128,26 @@ test('authenticated students receive a cached summary generated from published l
   let calls = 0;
   global.fetch = async (url, options) => {
     calls += 1;
-    assert.equal(url, configured.apiUrl);
-    assert.equal(options.headers.Authorization, `Bearer ${configured.apiKey}`);
-    const providerBody = JSON.parse(options.body);
-    assert.equal(providerBody.model, configured.model);
-    const promptText = providerBody.messages[1].content;
+    assert.equal(url, `${configured.ollamaBaseUrl}/api/chat`);
+    assert.equal(options.headers.Authorization, undefined);
+    const ollamaBody = JSON.parse(options.body);
+    assert.equal(ollamaBody.model, configured.model);
+    assert.equal(ollamaBody.stream, false);
+    assert.equal(ollamaBody.format, 'json');
+    assert.deepEqual(ollamaBody.options, { temperature: 0.2, num_ctx: 4096, num_predict: 700 });
+    const promptText = ollamaBody.messages[1].content;
     assert.ok(promptText.includes(lessonOne.title));
     assert.ok(!promptText.includes(studentA.email));
     assert.ok(!promptText.includes(tokenA));
-    assert.match(providerBody.messages[0].content, /Do not answer or generate comprehension assessment questions/u);
-    return providerFetch(summaryOutput)(url, options);
+    assert.match(ollamaBody.messages[0].content, /3–5 concise sentences/u);
+    assert.match(ollamaBody.messages[0].content, /answer assessment questions/u);
+    return ollamaFetch(summaryOutput)(url, options);
   };
 
   const app = createApp({ ...baseConfig, ai: configured });
   const endpoint = `/api/lessons/${lessonOne.id}/summary`;
   const first = await request(app).post(endpoint).set({ Authorization: `Bearer ${tokenA}` }).send({});
-  assert.equal(first.status, 200);
+  assert.equal(first.status, 200, JSON.stringify(first.body));
   assert.deepEqual(first.body.data.summary, summaryOutput);
   assert.equal(first.body.data.cached, false);
   assert.ok(first.body.data.generatedAt);
@@ -170,6 +175,38 @@ test('authenticated students receive a cached summary generated from published l
   }
 });
 
+test('a lesson with no source text is rejected without calling Ollama', async () => {
+  const original = {
+    title: lessonOne.title,
+    overview: lessonOne.overview,
+    lesson: lessonOne.lesson,
+    discussion: lessonOne.discussion,
+    example: lessonOne.example,
+    keyConcepts: lessonOne.keyConcepts,
+    keyTakeaway: lessonOne.keyTakeaway,
+  };
+  await Lesson.collection.updateOne({ _id: lessonOne._id }, { $set: {
+    title: '',
+    overview: '',
+    lesson: '',
+    discussion: '',
+    example: '',
+    keyConcepts: [],
+    keyTakeaway: '',
+  } });
+  let calls = 0;
+  global.fetch = async () => { calls += 1; throw new Error('must not call Ollama'); };
+  try {
+    const response = await request(createApp({ ...baseConfig, ai: configured }))
+      .post(`/api/lessons/${lessonOne.id}/summary`).set({ Authorization: `Bearer ${tokenA}` }).send({});
+    assert.equal(response.status, 422);
+    assert.equal(response.body.error.code, 'AI_INPUT_EMPTY');
+    assert.equal(calls, 0);
+  } finally {
+    await Lesson.collection.updateOne({ _id: lessonOne._id }, { $set: original });
+  }
+});
+
 test('missing AI configuration, provider errors, malformed output, and timeouts return controlled fallback errors', async () => {
   const noConfigApp = createApp(baseConfig);
   const noConfig = await request(noConfigApp).post(`/api/lessons/${lessonTwo.id}/summary`).set({ Authorization: `Bearer ${tokenA}` }).send({});
@@ -178,14 +215,20 @@ test('missing AI configuration, provider errors, malformed output, and timeouts 
   assert.match(noConfig.body.error.message, /continue reading the original lesson/u);
 
   const app = createApp({ ...baseConfig, ai: configured });
-  global.fetch = providerFetch(summaryOutput, { status: 429 });
+  global.fetch = ollamaFetch(summaryOutput, { status: 429 });
   const providerError = await request(app).post(`/api/lessons/${lessonTwo.id}/summary`).set({ Authorization: `Bearer ${tokenA}` }).send({});
   assert.equal(providerError.status, 503);
 
-  global.fetch = async () => ({ ok: true, async json() { return { choices: [{ message: { content: '{bad json' } }] }; } });
+  global.fetch = async () => { throw new TypeError('local Ollama is offline'); };
+  const offline = await request(app).post(`/api/lessons/${lessonTwo.id}/summary`).set({ Authorization: `Bearer ${tokenA}` }).send({});
+  assert.equal(offline.status, 503);
+  assert.equal(offline.body.error.code, 'AI_SUMMARY_UNAVAILABLE');
+  assert.match(offline.body.error.message, /local AI service is currently unavailable/u);
+
+  global.fetch = async () => ({ ok: true, async json() { return { message: { content: '{bad json' } }; } });
   const malformed = await request(app).post(`/api/lessons/${lessonTwo.id}/summary`).set({ Authorization: `Bearer ${tokenA}` }).send({});
   assert.equal(malformed.status, 503);
-  assert.equal(malformed.body.error.code, 'AI_SUMMARY_UNAVAILABLE');
+  assert.equal(malformed.body.error.code, 'AI_INVALID_RESPONSE');
 
   global.fetch = (_url, options) => new Promise((_resolve, reject) => {
     options.signal.addEventListener('abort', () => {
@@ -207,15 +250,19 @@ test('writing feedback is owned, cached, supplementary, and cannot modify the ru
   let calls = 0;
   global.fetch = async (_url, options) => {
     calls += 1;
-    const providerBody = JSON.parse(options.body);
-    const context = JSON.parse(providerBody.messages[1].content);
+    assert.equal(_url, `${configured.ollamaBaseUrl}/api/chat`);
+    assert.equal(options.headers.Authorization, undefined);
+    const ollamaBody = JSON.parse(options.body);
+    const context = JSON.parse(ollamaBody.messages[1].content);
     assert.equal(context.writingPrompt, activityOne.prompt);
     assert.equal(context.studentResponse, before.response);
     assert.equal(context.officialRubricResult.totalScore, before.totalScore);
-    assert.ok(!providerBody.messages[1].content.includes(studentA.email));
-    assert.ok(!providerBody.messages[1].content.includes(tokenA));
-    assert.match(providerBody.messages[0].content, /Do not rewrite the submission/u);
-    return providerFetch(feedbackOutput)(_url, options);
+    assert.equal(context.writingActivity.instructions, activityOne.instructions);
+    assert.equal(context.writingActivity.criteria.length, 5);
+    assert.ok(!ollamaBody.messages[1].content.includes(studentA.email));
+    assert.ok(!ollamaBody.messages[1].content.includes(tokenA));
+    assert.match(ollamaBody.messages[0].content, /Do not rewrite the submission/u);
+    return ollamaFetch(feedbackOutput)(_url, options);
   };
   const endpoint = `/api/lessons/${lessonOne.id}/writing/${submissionId}/ai-feedback`;
   const first = await request(app).post(endpoint).set({ Authorization: `Bearer ${tokenA}` }).send({});
@@ -251,13 +298,13 @@ test('writing-feedback failures leave official rubric data untouched and malform
   const before = await WritingSubmission.findById(official.submissionId).lean();
   const endpoint = `/api/lessons/${lessonOne.id}/writing/${official.submissionId}/ai-feedback`;
 
-  global.fetch = providerFetch(feedbackOutput, { status: 500 });
+  global.fetch = ollamaFetch(feedbackOutput, { status: 500 });
   const providerFailure = await request(createApp({ ...baseConfig, ai: configured }))
     .post(endpoint).set({ Authorization: `Bearer ${tokenA}` }).send({});
   assert.equal(providerFailure.status, 503);
   assert.equal(providerFailure.body.error.code, 'AI_FEEDBACK_UNAVAILABLE');
 
-  global.fetch = async () => ({ ok: true, async json() { return { choices: [{ message: { content: JSON.stringify({ strengths: [], areasForImprovement: [], suggestions: [], encouragement: '' }) } }] }; } });
+  global.fetch = async () => ({ ok: true, async json() { return { message: { content: JSON.stringify({ strengths: [], areasForImprovement: [], suggestions: [], encouragement: '' }) } }; } });
   const malformed = await request(createApp({ ...baseConfig, ai: configured }))
     .post(endpoint).set({ Authorization: `Bearer ${tokenA}` }).send({});
   assert.equal(malformed.status, 503);
@@ -272,7 +319,7 @@ test('writing-feedback failures leave official rubric data untouched and malform
   const timeout = await request(createApp({ ...baseConfig, ai: { ...configured, timeoutMs: 1000 } }))
     .post(endpoint).set({ Authorization: `Bearer ${tokenA}` }).send({});
   assert.equal(timeout.status, 503);
-  assert.equal(timeout.body.error.code, 'AI_FEEDBACK_UNAVAILABLE');
+  assert.equal(timeout.body.error.code, 'AI_REQUEST_TIMEOUT');
 
   const noConfig = await request(createApp(baseConfig)).post(endpoint).set({ Authorization: `Bearer ${tokenA}` }).send({});
   assert.equal(noConfig.status, 503);
@@ -285,9 +332,50 @@ test('writing-feedback failures leave official rubric data untouched and malform
   assert.equal(afterFailure.aiFeedback, undefined);
 });
 
-test('AI output validators reject missing fields and do not require live provider credentials', async () => {
+test('AI output validators reject missing fields and do not require a live Ollama model', async () => {
   assert.equal(createAIService(baseConfig).isConfigured, false);
   const service = createAIService({ ai: configured });
-  global.fetch = async () => ({ ok: true, async json() { return { choices: [{ message: { content: JSON.stringify({ mainIdea: 'Too little' }) } }] }; } });
-  await assert.rejects(() => service.generateLessonSummary({ title: 'test' }), { code: 'AI_SUMMARY_UNAVAILABLE' });
+  global.fetch = async () => ({ ok: true, async json() { return { message: { content: JSON.stringify({ mainIdea: 'Too little' }) } }; } });
+  await assert.rejects(() => service.generateLessonSummary({ title: 'test' }), { code: 'AI_INVALID_RESPONSE' });
+});
+
+test('Ollama configuration rejects non-loopback URLs and over-limit prompts without a request', async () => {
+  const { validOllamaBaseUrl } = require('../services/aiService');
+  assert.equal(validOllamaBaseUrl('http://127.0.0.1:11434'), true);
+  assert.equal(validOllamaBaseUrl('http://localhost:11434'), true);
+  assert.equal(validOllamaBaseUrl('http://192.168.1.25:11434'), false);
+  assert.equal(validOllamaBaseUrl('https://ollama.example'), false);
+
+  let calls = 0;
+  global.fetch = async () => { calls += 1; throw new Error('must not fetch'); };
+  const external = createAIService({ ai: { ...configured, ollamaBaseUrl: 'https://ollama.example' } });
+  assert.equal(external.isConfigured, false);
+  await assert.rejects(() => external.generateLessonSummary({ title: 'Lesson' }), { code: 'AI_SUMMARY_UNAVAILABLE' });
+  assert.equal(calls, 0);
+
+  const missingModel = createAIService({ ai: { ...configured, model: '' } });
+  await assert.rejects(() => missingModel.generateLessonSummary({ title: 'Lesson' }), { code: 'AI_MODEL_UNAVAILABLE' });
+  assert.equal(calls, 0);
+
+  const service = createAIService({ ai: configured });
+  await assert.rejects(
+    () => service.generateLessonSummary({ lesson: 'x'.repeat(12001) }),
+    { statusCode: 413, code: 'AI_INPUT_TOO_LARGE' },
+  );
+  assert.equal(calls, 0);
+});
+
+test('an uninstalled local model and empty Ollama response return distinct controlled errors', async () => {
+  const app = createApp({ ...baseConfig, ai: configured });
+  global.fetch = ollamaFetch(null, { status: 404 });
+  const missingModel = await request(app).post(`/api/lessons/${lessonTwo.id}/summary`)
+    .set({ Authorization: `Bearer ${tokenA}` }).send({});
+  assert.equal(missingModel.status, 503);
+  assert.equal(missingModel.body.error.code, 'AI_MODEL_UNAVAILABLE');
+
+  global.fetch = async () => ({ ok: true, async json() { return { message: { content: ' ' } }; } });
+  const empty = await request(app).post(`/api/lessons/${lessonTwo.id}/summary`)
+    .set({ Authorization: `Bearer ${tokenA}` }).send({});
+  assert.equal(empty.status, 503);
+  assert.equal(empty.body.error.code, 'AI_INVALID_RESPONSE');
 });

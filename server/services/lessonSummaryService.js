@@ -24,6 +24,16 @@ async function generateLessonSummary(lessonId, aiService) {
   if (!lesson) throw new AppError('This lesson is not available.', 404, 'LESSON_NOT_FOUND');
 
   const content = getLessonContent(lesson);
+  const sourceText = [
+    content.title,
+    content.overview,
+    content.lesson,
+    content.discussion,
+    content.example,
+    ...content.keyConcepts,
+    content.keyTakeaway,
+  ].join(' ').trim();
+  if (!sourceText) throw new AppError('This lesson does not contain text to summarize.', 422, 'AI_INPUT_EMPTY');
   const contentHash = crypto.createHash('sha256').update(JSON.stringify(content)).digest('hex');
   const cached = await LessonSummary.findOne({ lesson: lessonId }).lean();
   if (cached && cached.contentHash === contentHash

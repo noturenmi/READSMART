@@ -25,9 +25,10 @@ const config = {
   jwtExpiresIn: '1h',
   corsOrigins: [],
   ai: {
-    apiKey: 'mock-provider-key',
-    apiUrl: 'https://provider.example/v1/chat/completions',
+    provider: 'ollama',
+    ollamaBaseUrl: 'http://127.0.0.1:11434',
     model: 'mock-model',
+    numCtx: 4096,
     timeoutMs: 1000,
   },
 };
@@ -148,7 +149,7 @@ test('catalog lesson sections are complete and a student completes reading, writ
   global.fetch = async () => ({
     ok: true,
     async json() {
-      return { choices: [{ message: { content: JSON.stringify(providerOutput) } }] };
+      return { message: { content: JSON.stringify(providerOutput) } };
     },
   });
 

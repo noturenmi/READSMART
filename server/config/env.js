@@ -28,10 +28,11 @@ function getConfig() {
       .map((origin) => origin.trim())
       .filter(Boolean),
     ai: {
-      apiKey: process.env.AI_API_KEY || '',
-      apiUrl: process.env.AI_API_URL || '',
-      model: process.env.AI_MODEL || '',
-      timeoutMs: Number(process.env.AI_TIMEOUT_MS || 15000),
+      provider: process.env.AI_PROVIDER || '',
+      ollamaBaseUrl: process.env.OLLAMA_BASE_URL || '',
+      model: process.env.OLLAMA_MODEL || '',
+      numCtx: Number(process.env.OLLAMA_NUM_CTX || 4096),
+      timeoutMs: Number(process.env.AI_TIMEOUT_MS || 90000),
     },
   };
 }

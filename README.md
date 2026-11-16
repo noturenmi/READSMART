@@ -43,16 +43,31 @@ Create writing activities for the 40 published lessons with `npm run seed:writin
 
 The API listens on port 3000 by default and does not start until MongoDB connects successfully.
 
-### Optional AI-assisted learning support
+### Optional local AI-assisted learning support
 
-The AI features use an OpenAI-compatible chat-completions endpoint configured only in `server/.env`:
+AI summaries and supplementary writing feedback run through a locally hosted Ollama instance. The Express backend is the only caller of Ollama; the mobile app continues to call the authenticated READSMART API. No cloud AI provider or API key is used.
 
-- `AI_API_KEY` — provider secret
-- `AI_API_URL` — full chat-completions endpoint URL
-- `AI_MODEL` — provider model identifier
-- `AI_TIMEOUT_MS` — optional request timeout (1000–60000 ms; default 15000)
+Prerequisites:
 
-Leave the AI values blank to disable the features; the API and official assessments continue to work. The provider key must never be put in `mobile/.env`, an `EXPO_PUBLIC_*` variable, or a mobile bundle. Provider requests and responses are not logged by the AI service. Automated tests mock the provider and do not need credentials.
+1. Install Ollama on the computer running the backend.
+2. Check the locally installed model name with `ollama list`. READSMART does not download a model automatically.
+3. Copy the exact installed model name into `OLLAMA_MODEL` in `server/.env`. The checked-in example leaves it blank intentionally.
+4. Keep Ollama bound to loopback at `http://127.0.0.1:11434`; do not expose port 11434 to the LAN or internet.
+5. Start Ollama using the Ollama desktop app or `ollama serve`. If needed, load a model only after confirming it is already installed with `ollama list`.
+
+Local server configuration in `server/.env`:
+
+- `AI_PROVIDER=ollama`
+- `OLLAMA_BASE_URL=http://127.0.0.1:11434` — backend-only loopback URL; other hosts are rejected
+- `OLLAMA_MODEL` — exact name shown by `ollama list`
+- `OLLAMA_NUM_CTX=4096` — initial context limit to reduce memory use
+- `AI_TIMEOUT_MS=90000` — backend inference timeout
+
+Leave the model name blank to disable AI until Ollama and an installed model are ready. The API and official assessments continue to work if Ollama is offline. AI calls have a longer mobile request timeout than ordinary API calls; all other API timeouts remain unchanged. Neither the Ollama URL nor model configuration belongs in `mobile/.env` or an `EXPO_PUBLIC_*` variable.
+
+To test manually, start Ollama and the READSMART backend, sign in to the mobile app, then use **Generate Summary** on a published lesson and **Get AI-Assisted Feedback** on your own saved writing result. The endpoints are `POST /api/lessons/:lessonId/summary` and `POST /api/lessons/:lessonId/writing/:submissionId/ai-feedback`; both require the normal READSMART bearer token and an empty request body. A model-not-installed response, offline service, timeout, or invalid model output returns a controlled error rather than fabricated AI content. Automated tests mock Ollama responses; they do not count as live inference verification.
+
+For physical Android testing, put the backend computer and phone on a network where the phone can reach the configured `EXPO_PUBLIC_API_URL` (typically `http://<computer-LAN-IP>:3000/api`). Allow inbound traffic to the Express port as needed, but keep Ollama’s port 11434 restricted to loopback. Prompts and student writing are sent only from Express to the local Ollama process, not to an external inference provider.
 
 ### Create an administrator
 
@@ -132,4 +147,4 @@ Administrator accounts are created only through the existing `npm run create-adm
 
 ## Environment files
 
-`server/.env` and `mobile/.env` contain local configuration and are ignored by their respective `.gitignore` files. Only the `.env.example` templates should be shared. Never put MongoDB credentials, JWT secrets, AI provider keys, or admin passwords in the Expo app.
+`server/.env` and `mobile/.env` contain local configuration and are ignored by their respective `.gitignore` files. Only the `.env.example` templates should be shared. Never put MongoDB credentials, JWT secrets, administrator passwords, or server-only Ollama configuration in the Expo app.

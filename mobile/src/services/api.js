@@ -28,7 +28,7 @@ function getBaseUrl() {
   return configuredUrl.replace(/\/+$/, '');
 }
 
-async function request(path, { method = 'GET', body, authenticated = false } = {}) {
+async function request(path, { method = 'GET', body, authenticated = false, timeoutMs = REQUEST_TIMEOUT_MS, timeoutMessage } = {}) {
   const url = `${getBaseUrl()}${path}`;
   const headers = { Accept: 'application/json' };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
@@ -38,7 +38,7 @@ async function request(path, { method = 'GET', body, authenticated = false } = {
   }
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   let response;
   try {
     response = await fetch(url, {
@@ -49,7 +49,7 @@ async function request(path, { method = 'GET', body, authenticated = false } = {
     });
   } catch (error) {
     const message = error.name === 'AbortError'
-      ? 'The server took too long to respond. Please try again.'
+      ? (timeoutMessage || 'The server took too long to respond. Please try again.')
       : 'Cannot reach the READSMART server. Check the API URL, network, and that the server is running.';
     throw new ApiError(message, 0, 'SERVER_UNAVAILABLE');
   } finally {
@@ -128,6 +128,8 @@ export const api = {
       method: 'POST',
       body: {},
       authenticated: true,
+      timeoutMs: 105000,
+      timeoutMessage: 'The local AI request took too long. Please try again; the original lesson is still available.',
     });
   },
   getLessonQuestions(lessonId) {
@@ -176,6 +178,8 @@ export const api = {
       method: 'POST',
       body: {},
       authenticated: true,
+      timeoutMs: 105000,
+      timeoutMessage: 'The local AI request took too long. Please try again; your rubric assessment is still available.',
     });
   },
   getMyProgress() {

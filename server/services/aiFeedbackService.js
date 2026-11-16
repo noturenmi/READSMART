@@ -12,8 +12,21 @@ function createFeedbackContext({ lesson, activity, submission }) {
       title: lesson.title,
       overview: lesson.overview || '',
       content: lesson.lesson || '',
+      discussion: lesson.discussion || '',
+      example: lesson.example || '',
       keyConcepts: Array.isArray(lesson.keyConcepts) ? lesson.keyConcepts : [],
       keyTakeaway: lesson.keyTakeaway || '',
+    },
+    writingActivity: {
+      title: activity.title,
+      prompt: activity.prompt,
+      instructions: activity.instructions,
+      criteria: Array.isArray(activity.criteria) ? activity.criteria.map(({ key, label, description, maximumScore }) => ({
+        key,
+        label,
+        description,
+        maximumScore,
+      })) : [],
     },
     writingPrompt: activity.prompt,
     studentResponse: submission.response,
@@ -36,10 +49,10 @@ async function generateWritingFeedback(userId, lessonId, submissionId, aiService
 
   const [lesson, activity] = await Promise.all([
     Lesson.findOne({ _id: lessonId, ...publishedLessonFilter })
-      .select('title overview lesson keyConcepts keyTakeaway')
+      .select('title overview lesson discussion example keyConcepts keyTakeaway')
       .lean(),
     WritingActivity.findOne({ _id: submission.writingActivity, lesson: lessonId, isPublished: true })
-      .select('prompt title')
+      .select('prompt title instructions criteria')
       .lean(),
   ]);
   if (!lesson || !activity) {
