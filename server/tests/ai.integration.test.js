@@ -134,6 +134,7 @@ test('authenticated students receive a cached summary generated from published l
     assert.equal(ollamaBody.model, configured.model);
     assert.equal(ollamaBody.stream, false);
     assert.equal(ollamaBody.format, 'json');
+    assert.equal(ollamaBody.think, false);
     assert.deepEqual(ollamaBody.options, { temperature: 0.2, num_ctx: 4096, num_predict: 700 });
     const promptText = ollamaBody.messages[1].content;
     assert.ok(promptText.includes(lessonOne.title));

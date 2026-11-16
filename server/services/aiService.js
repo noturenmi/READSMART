@@ -123,6 +123,7 @@ function createAIService(config = {}) {
             ],
             stream: false,
             format: 'json',
+            think: false,
             options: { temperature: 0.2, num_ctx: numCtx, num_predict: maxTokens },
           }),
           signal: controller.signal,
