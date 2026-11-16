@@ -17,6 +17,12 @@
     "plugins": [
       "expo-secure-store",
       "expo-status-bar"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "d8323d80-6000-4132-9c13-ba053c2885e8"
+      }
+    },
+    "owner": "neu_santos_miren"
   }
 }
